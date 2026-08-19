@@ -95,6 +95,7 @@ class DataEngine:
 
         self._streaming = False
         self._srv_thread = None
+        self._server_socket = None
         self._clients: List[socket.socket] = []
         self._cli_lock = threading.Lock()
 
@@ -117,6 +118,7 @@ class DataEngine:
     def set_simulate(self, on: bool):
         """Toggle between idle (no signal) and simulated test data."""
         self.simulate = bool(on)
+        self.sensor_ok = self.simulate
         if not self.simulate:
             self._apply_rest_state()
 
@@ -129,7 +131,9 @@ class DataEngine:
                 c.temperature = REST_CELL_TEMP
         self.speed = 0.0
         self.current = 0.0
+        self.soc = 0.0
         self._spd_target = 0.0
+        self._aggregate()
 
     @property
     def can_ok(self) -> bool:
@@ -140,12 +144,6 @@ class DataEngine:
     @property
     def can_status_text(self) -> str:
         return "SIMULATED" if self.simulate else "NO SIGNAL"
-
-    @property
-    def has_signal(self) -> bool:
-        """True only when there's data worth trusting (i.e. simulated, or
-        in future, a real live bus). Idle/no-signal state is not 'data'."""
-        return self.simulate
 
     # ─────────────────────────────────────────
     # Main tick — dispatches to simulate or idle
@@ -164,7 +162,9 @@ class DataEngine:
             self._hz_count = 0
             self._hz_last = now
 
-        # Push history at ~1 Hz to reduce UI graph pressure
+        self._aggregate()
+
+        # Push history at ~1 Hz to reduce UI graph pressure.
         self._hist_tick += 1
         if self._hist_tick >= 10:
             self._hist_tick = 0
@@ -176,8 +176,6 @@ class DataEngine:
             self.tmax_h.append(self.tmax)
             self.power_h.append(self.power_kw)
             self.dv_h.append(self.delta_v)
-
-        self._aggregate()
 
         # Fault detection only makes sense when there's an actual signal
         # (simulated today, real CAN in future). In idle/no-signal mode
@@ -407,33 +405,55 @@ class DataEngine:
 
     def stop_streaming(self):
         self._streaming = False
+        if self._server_socket:
+            try:
+                self._server_socket.close()
+            except OSError:
+                pass
+            self._server_socket = None
+        with self._cli_lock:
+            clients, self._clients = self._clients, []
+        for client in clients:
+            try:
+                client.close()
+            except OSError:
+                pass
 
     @property
     def is_streaming(self):
-        return self._streaming
+        return self._streaming and self._server_socket is not None
 
     def _srv_loop(self):
+        srv = None
         try:
             srv = socket.socket()
             srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             srv.bind(("0.0.0.0", TELEMETRY_PORT))
             srv.listen(5)
             srv.settimeout(1.0)
+            self._server_socket = srv
             while self._streaming:
                 try:
                     conn, _ = srv.accept()
+                    conn.settimeout(0.5)
                     with self._cli_lock:
                         self._clients.append(conn)
                 except socket.timeout:
                     pass
-            srv.close()
-        except Exception:
-            pass
+        except OSError:
+            self._streaming = False
+        finally:
+            if srv:
+                srv.close()
+            self._server_socket = None
+            if self._streaming:
+                self._streaming = False
 
     def _broadcast(self):
         with self._cli_lock:
             if not self._clients:
                 return
+            clients = list(self._clients)
             payload = {
                 "t": round(self._t, 1),
                 "speed": round(self.speed, 1),
@@ -449,23 +469,30 @@ class DataEngine:
                 "simulated": self.simulate,
             }
             data = (json.dumps(payload) + "\n").encode()
-            dead = []
-            for c in self._clients:
-                try:
-                    c.sendall(data)
-                except Exception:
-                    dead.append(c)
-            for c in dead:
-                self._clients.remove(c)
+        dead = []
+        for client in clients:
+            try:
+                client.sendall(data)
+            except OSError:
+                dead.append(client)
+        if dead:
+            with self._cli_lock:
+                for client in dead:
+                    if client in self._clients:
+                        self._clients.remove(client)
+                    try:
+                        client.close()
+                    except OSError:
+                        pass
 
     def local_ip(self):
         try:
-            s = socket.socket()
-            s.connect(("8.8.8.8", 80))
-            ip = s.getsockname()[0]
-            s.close()
+            with socket.socket() as s:
+                s.settimeout(0.5)
+                s.connect(("8.8.8.8", 80))
+                ip = s.getsockname()[0]
             return ip
-        except Exception:
+        except OSError:
             return "127.0.0.1"
 
 

@@ -22,7 +22,7 @@ SEM = dict(
     GREEN="#22C55E",    GREEN_BAR="#4ADE80",
     AMBER="#D97706",    AMBER_BAR="#FCD34D",
     RED="#EF4444",      RED_BAR="#FCA5A5",
-    BLUE="#3B82F6",     BLUE_BAR="#93C5FD",   # info level
+    BLUE="#3B82F6",     # info level
     ORANGE="#F97316",
 )
 
@@ -35,7 +35,7 @@ _FAMILIES = {
 MONO = "'JetBrains Mono','Fira Code','Cascadia Code','Roboto Mono',Consolas,monospace"
 
 # Base font sizes for 1024×600 7-inch (slightly larger than 800×480)
-_BASE = dict(XS=15, SM=16, MD=19, LG=24, XL=36, XXL=40)
+_BASE = dict(XS=15, SM=16, MD=19, LG=24, XL=36)
 
 
 class ThemeManager:
@@ -88,7 +88,7 @@ def get_qss() -> str:
     txt=P["TEXT_PRI"]; sec=P["TEXT_SEC"]; dim=P["TEXT_DIM"]; bdr=P["BORDER"]
     acc=P["ACCENT"]; nav=P["NAV_BG"]; navsel=P["NAV_SEL"]
     g=SEM["GREEN"]; gb=SEM["GREEN_BAR"]; a=SEM["AMBER"]; r=SEM["RED"]
-    bl=SEM["BLUE"]  # SEM["BLUE_BAR"] intentionally unused here — no bar currently uses it
+    bl=SEM["BLUE"]
     bw = max(0.5, min(2.0, TM.contrast))
 
     return f"""

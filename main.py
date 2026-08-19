@@ -47,7 +47,7 @@ from PyQt5.QtWidgets import (
 
 from theme import TM, get_qss
 from ev import DataEngine, Logger
-from widgets import NavBar, CriticalAlertOverlay
+from widgets import NavBar
 from pages.dashboard import DashboardPage
 from pages.cells import HeatmapPage
 from pages.pack import PackDiagramPage
@@ -127,8 +127,6 @@ class MainWindow(QMainWindow):
         self.logger = Logger(self.engine)
 
         self.current_page = 0
-        self.alert_snoozed = False
-
         _init_rpi_backlight()
         self.build_ui()
         self.apply_theme()
@@ -173,10 +171,6 @@ class MainWindow(QMainWindow):
         root.addWidget(self.stack, 1)
         root.addWidget(self.navbar)
 
-        self.alert_overlay = CriticalAlertOverlay(parent=container)
-        self.alert_overlay.setGeometry(0, 0, WIN_W, WIN_H)
-        self.alert_overlay.dismissed.connect(self.on_alert_dismissed)
-
     # ─────────────────────────────────────────
     # Navigation
     # ─────────────────────────────────────────
@@ -205,23 +199,10 @@ class MainWindow(QMainWindow):
             page = self.pages[self.current_page]
             page.refresh(self.engine, self.logger)
 
-            if self.engine.has_critical and not self.alert_snoozed:
-                self.alert_overlay.show_faults(self.engine.active_faults)
-                self.alert_overlay.raise_()
-            elif not self.engine.has_critical:
-                self.alert_snoozed = False
-                self.alert_overlay.hide_alert()
-
         except Exception as e:
             # One bad frame must never take the whole dashboard down mid
             # session. Log it, skip this frame, keep the 10Hz timer going.
             _log_crash("tick() frame error", e)
-
-    # ─────────────────────────────────────────
-    # Alert handling
-    # ─────────────────────────────────────────
-    def on_alert_dismissed(self):
-        self.alert_snoozed = True
 
     # ─────────────────────────────────────────
     # Save snapshot
@@ -282,7 +263,6 @@ def main():
         window.show()
 
     return app.exec_()
-
 
 if __name__ == "__main__":
     sys.exit(main())
