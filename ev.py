@@ -1,23 +1,3 @@
-"""
-ev.py — DataEngine · v20
-
-Changes from v19:
-  - Random data generation is now OPT-IN. By default the engine sits in an
-    idle "no signal" state (safe, deterministic values, CAN status = red).
-    Flip DataEngine.set_simulate(True) from the Settings page to generate
-    test data — CAN status stays red but switches to "SIMULATED" so nobody
-    mistakes it for a live pack.
-  - Removed the unused FaultRecord dataclass (dead code — faults are plain
-    tuples everywhere, this was never instantiated).
-  - Removed the fault-list truncation (`faults[:14]`). All active faults are
-    now kept; the fault panel widget is responsible for rendering that
-    efficiently (see widgets.py — it only rebuilds when the fault set
-    actually changes, not every tick).
-
-Once real CAN hardware is wired in, `_tick_live()` is the place to fill in
-python-can + cantools decoding — swap the `self.simulate` flag logic for a
-`self.mode` of "idle" / "simulate" / "live" and call the right tick method.
-"""
 
 import csv
 import datetime
