@@ -15,7 +15,6 @@ from pages.common import _SegPanel
 class HeatmapPage(QWidget):
     def __init__(self, engine: DataEngine, parent=None):
         super().__init__(parent)
-        self._engine = engine
         self._panels = []
         self._strip = TelemetryStrip()
         self._build()

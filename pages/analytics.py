@@ -36,7 +36,6 @@ class AnalyticsPage(QWidget):
 
     def __init__(self, engine: DataEngine, parent=None):
         super().__init__(parent)
-        self._engine = engine
         self._window = 300
         self._cur = 0
         self._strip = TelemetryStrip()

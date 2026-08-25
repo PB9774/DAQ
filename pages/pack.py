@@ -34,7 +34,6 @@ class _SegTile:
 class PackDiagramPage(QWidget):
     def __init__(self, engine: DataEngine, parent=None):
         super().__init__(parent)
-        self._engine = engine
         self._strip = TelemetryStrip()
         self._mode = "health"  # "health" | "voltage" | "temp"
         self._tiles = []

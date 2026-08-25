@@ -59,8 +59,9 @@ from pages.settings import SettingsPage, APP_VERSION
 # Configuration
 # ─────────────────────────────────────────────
 FULLSCREEN = False
-WIN_W = 1024
-WIN_H = 600
+WINDOW_WIDTH = 1024
+WINDOW_HEIGHT = 600
+UPDATE_INTERVAL_MS = 100
 
 
 # ─────────────────────────────────────────────
@@ -69,10 +70,12 @@ WIN_H = 600
 # ─────────────────────────────────────────────
 def _log_crash(context: str, exc: BaseException):
     try:
-        with open(CRASH_LOG, "a") as f:
-            f.write("\n" + "=" * 70 + "\n")
-            f.write("[%s] %s\n" % (datetime.datetime.now().isoformat(timespec="seconds"), context))
-            f.write("".join(traceback.format_exception(type(exc), exc, exc.__traceback__)))
+        timestamp = datetime.datetime.now().isoformat(timespec="seconds")
+        details = traceback.format_exception(type(exc), exc, exc.__traceback__)
+        with open(CRASH_LOG, "a") as crash_file:
+            crash_file.write("\n" + "=" * 70 + "\n")
+            crash_file.write("[%s] %s\n" % (timestamp, context))
+            crash_file.write("".join(details))
     except Exception:
         pass  # logging the crash should never itself crash the app
 
@@ -121,19 +124,18 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.setWindowTitle("Accelerons Electric — BMS Monitor " + APP_VERSION)
-        self.setFixedSize(WIN_W, WIN_H)
+        self.setFixedSize(WINDOW_WIDTH, WINDOW_HEIGHT)
 
         self.engine = DataEngine()
         self.logger = Logger(self.engine)
 
-        self.current_page = 0
         _init_rpi_backlight()
         self.build_ui()
         self.apply_theme()
 
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.tick)
-        self.timer.start(100)  # 10 Hz
+        self.timer.start(UPDATE_INTERVAL_MS)
 
     # ─────────────────────────────────────────
     # UI Construction
@@ -175,7 +177,6 @@ class MainWindow(QMainWindow):
     # Navigation
     # ─────────────────────────────────────────
     def on_nav(self, index):
-        self.current_page = index
         self.stack.setCurrentIndex(index)
 
     # ─────────────────────────────────────────
@@ -196,7 +197,7 @@ class MainWindow(QMainWindow):
             self.engine.tick()
             self.logger.record()
 
-            page = self.pages[self.current_page]
+            page = self.stack.currentWidget()
             page.refresh(self.engine, self.logger)
 
         except Exception as e:
@@ -259,7 +260,10 @@ def main():
         app.setOverrideCursor(QCursor(Qt.BlankCursor))
     else:
         screen = app.primaryScreen().geometry()
-        window.move((screen.width() - WIN_W) // 2, (screen.height() - WIN_H) // 2)
+        window.move(
+            (screen.width() - WINDOW_WIDTH) // 2,
+            (screen.height() - WINDOW_HEIGHT) // 2,
+        )
         window.show()
 
     return app.exec_()

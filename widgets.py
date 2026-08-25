@@ -227,7 +227,3 @@ class NavBar(QWidget):
         for button_index, button in enumerate(self._buttons):
             button.setChecked(button_index == index)
         self.page_changed.emit(index)
-
-    def set_page(self, index):
-        for button_index, button in enumerate(self._buttons):
-            button.setChecked(button_index == index)

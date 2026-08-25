@@ -42,8 +42,7 @@ class owns the update loop, and everything else just reads and displays.
                           ▼
 ┌─────────────────────────────────────────────────────────┐
 │  widgets.py  — general-purpose widgets, not page-specific    │
-│  LogoWidget · SevenSegDisplay · TelemetryStrip · NavBar ·      │
-│  CriticalAlertOverlay                                            │
+│  LogoWidget · TelemetryStrip · NavBar                            │
 │                                                                     │
 │  theme.py — palette, font scale, brightness/contrast, QSS builder   │
 └─────────────────────────────────────────────────────────┘
@@ -73,6 +72,7 @@ logs/                     CSVs, fault log, crash log (all generated at runtime)
 ```
 
 **Why it's built this way:**
+
 - `DataEngine` never imports PyQt — it's pure data/logic, which means the
   fault-detection math could be unit-tested with no GUI involved at all
   (not currently done — see the roadmap below).
@@ -91,12 +91,14 @@ logs/                     CSVs, fault log, crash log (all generated at runtime)
 ## Screens
 
 ### 1. Dashboard (`pages/dashboard.py`)
-**Motto:** *Everything you need in one glance — nothing you don't.*
+
+**Motto:** _Everything you need in one glance — nothing you don't._
 
 **Purpose:** The screen a driver or pit crew member looks at 95% of the
 time. Answers "is everything okay right now?" in under a second.
 
 **Features:**
+
 - Live speed on a hand-painted 7-segment display
 - State of charge (SOC) as a number + colored bar
 - Pack voltage and current
@@ -110,12 +112,14 @@ time. Answers "is everything okay right now?" in under a second.
   live tick rate
 
 ### 2. Cell Heatmap (`pages/cells.py`)
-**Motto:** *No cell hides from view.*
+
+**Motto:** _No cell hides from view._
 
 **Purpose:** The zoomed-in screen — when the Dashboard says "something's
 off," this is where you find out exactly which cell and by how much.
 
 **Features:**
+
 - All 98 individual cell voltages, color-coded green/yellow/red
 - All 49 temperature sensors, color-coded the same way
 - The single highest and lowest voltage cell highlighted with a border
@@ -124,13 +128,15 @@ off," this is where you find out exactly which cell and by how much.
 - Pack-wide Tmax/Tmin summary at the top
 
 ### 3. Pack Diagram (`pages/pack.py`)
-**Motto:** *See the whole pack's health without hunting for numbers.*
+
+**Motto:** _See the whole pack's health without hunting for numbers._
 
 **Purpose:** A simplified, zoomed-out version of the heatmap — for
 quickly comparing all 7 segments against each other rather than staring
 at 98 individual numbers.
 
 **Features:**
+
 - 7 segment tiles, laid out to mirror the physical pack
 - Switchable coloring mode: by health, by average voltage, or by max
   temperature
@@ -139,7 +145,8 @@ at 98 individual numbers.
   M warning segments")
 
 ### 4. Analytics (`pages/analytics.py`)
-**Motto:** *Watch the trend, not just the moment.*
+
+**Motto:** _Watch the trend, not just the moment._
 
 **Purpose:** Everything else on the app is "right now" — this screen is
 "how did we get here?" Useful for spotting slow drift (e.g. one cell
@@ -147,6 +154,7 @@ creeping toward imbalance over a session) that a single glance would
 never catch.
 
 **Features:**
+
 - 5 live charts: pack voltage + current (dual axis), SOC, power (kW),
   max cell temperature, and cell voltage imbalance (ΔV)
 - Adjustable time window: 1 / 5 / 10 / 20 / 30 minutes
@@ -154,13 +162,15 @@ never catch.
 - Tab-based switching between charts
 
 ### 5. Storage (`pages/storage.py`)
-**Motto:** *Nothing recorded is nothing learned.*
+
+**Motto:** _Nothing recorded is nothing learned._
 
 **Purpose:** Turns the dashboard from "a screen you watch" into "a
 record you can review." Also the bridge to a second machine watching the
 same data live.
 
 **Features:**
+
 - Start/stop continuous CSV recording, with live duration + file size
 - Start/stop a TCP telemetry stream (JSON lines, port 9000) for a second
   device to tap into live data
@@ -169,7 +179,8 @@ same data live.
 - Export any log file
 
 ### 6. Settings (`pages/settings.py`)
-**Motto:** *Make the dashboard work the way your team works.*
+
+**Motto:** _Make the dashboard work the way your team works._
 
 **Purpose:** Everything about how the dashboard looks and behaves,
 separated from everything about what it's showing — so the team can
@@ -177,6 +188,7 @@ tune it for the pit garage, the car, or a teammate's eyes without
 touching any other screen.
 
 **Features:**
+
 - Dark / light theme toggle
 - Font size (S/M/L) and font family
 - Brightness (dims the Raspberry Pi's actual backlight) and contrast
@@ -191,7 +203,7 @@ touching any other screen.
 
 These are open issues in the current codebase — not yet fixed.
 
-1. **Dismissing a critical alert can silence a *different*, later fault.**
+1. **Dismissing a critical alert can silence a _different_, later fault.**
    `MainWindow.tick()` tracks dismissal with one flag,
    `self.alert_snoozed`, which only resets to `False` once
    `engine.has_critical` goes back to `False` entirely. If Fault A (crit)
@@ -199,14 +211,14 @@ These are open issues in the current codebase — not yet fixed.
    completely different, unrelated crit fault) appears while A is still
    active, the overlay will **not** reappear — because the flag doesn't
    reset until every critical fault has cleared, not just the one you
-   saw. `alert_snoozed` needs to track *which* fault codes were
+   saw. `alert_snoozed` needs to track _which_ fault codes were
    dismissed, not just "was anything dismissed."
 
 2. **Dragging the brightness slider can stutter the UI.**
    `_set_bright()` fires on every single `valueChanged` tick while
    dragging (not just on release), and each call can end up inside
    `_rpi_set_brightness()`'s `subprocess.run(["sudo", "tee", ...],
-   timeout=2)` fallback path if the udev permission isn't active yet.
+timeout=2)` fallback path if the udev permission isn't active yet.
    That's a blocking call on the GUI thread, up to 2 seconds long, that
    can fire many times during one slider drag. Should debounce (only
    apply on release, e.g. via `sliderReleased` instead of
@@ -275,7 +287,7 @@ In rough priority order:
 
 7. **Add a lightweight watchdog for tick() duration, not just
    exceptions.** The current crash isolation catches errors but not
-   *slowness* — if a future change (e.g. a slow CAN read) makes one tick
+   _slowness_ — if a future change (e.g. a slow CAN read) makes one tick
    take 500ms instead of 10ms, nothing currently notices or logs it. A
    simple "warn if a tick takes longer than N ms" check would catch
    performance regressions before they show up as dropped frames on
