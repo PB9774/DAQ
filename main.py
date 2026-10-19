@@ -1,7 +1,11 @@
 """
-main.py — Accelerons Electric BMS
-PyQt5 · 1024×600 · Raspberry Pi 7" · v20
+main.py — Accelerons Electric BMS dashboard.
 
+PyQt5 · 1024x600 · Raspberry Pi 4 with the 7" DSI panel.
+
+Two shells share one 10 Hz loop: a driver HUD and the engineer console. Only
+the visible page is refreshed, pages are built the first time they are opened,
+and nothing re-applies a stylesheet unless a preference actually changed.
 """
 
 import datetime
@@ -9,264 +13,238 @@ import os
 import sys
 import traceback
 
-# ─────────────────────────────────────────────
-# Environment setup (important for Raspberry Pi)
-# ─────────────────────────────────────────────
 os.environ.setdefault("QT_AUTO_SCREEN_SCALE_FACTOR", "0")
 os.environ.setdefault("DISPLAY", ":0")
-os.environ.setdefault("QT_QUICK_BACKEND", "software")  # faster on RPi (no GL fallback)
+os.environ.setdefault("QT_QUICK_BACKEND", "software")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BASE_DIR)
-LOG_DIR = os.path.join(BASE_DIR, "logs")
-CRASH_LOG = os.path.join(LOG_DIR, "crash.log")
-os.makedirs(LOG_DIR, exist_ok=True)
 
-# ─────────────────────────────────────────────
-# Dependency check — fails fast with ONE clear message.
-# Actual installation is install.sh's job (apt for PyQt5/numpy, pip only
-# for pyqtgraph) so there's never a conflicting second install path.
-# ─────────────────────────────────────────────
 try:
-    import PyQt5  # noqa: F401
-except ImportError:
-    print(
-        "[BMS] PyQt5 is not installed. Run install.sh first:\n"
-        "      bash install.sh\n"
-        "(main.py intentionally does not auto-install packages anymore — "
-        "see the module docstring for why.)",
-        file=sys.stderr,
+    from PyQt5.QtCore import Qt, QTimer
+    from PyQt5.QtGui import QCursor, QFont, QKeySequence
+    from PyQt5.QtWidgets import (
+        QAction, QApplication, QMainWindow, QStackedWidget, QVBoxLayout, QWidget,
     )
-    sys.exit(1)
+except ImportError:
+    sys.exit("[BMS] PyQt5 is missing. Run:  bash install.sh")
 
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QFont, QCursor
-from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QStackedWidget, QMessageBox,
+from core import backlight
+from core.config import (
+    APP_NAME, APP_VERSION, CRASH_LOG, FULLSCREEN, SCREEN_H, SCREEN_W, TICK_MS,
 )
+from core.engine import DataEngine
+from core.recorder import Recorder
+from pages import (
+    DriverPage, LogsPage, OverviewPage, SegmentDetailsPage, SetupPage, TrendsPage,
+)
+from ui.chrome import NavBar, StatusStrip
+from ui.helpers import restyle_tree
+from ui.theme import DRIVER, ENGINEER, TM, stylesheet
 
-from theme import TM, get_qss
-from ev import DataEngine, Logger
-from widgets import NavBar
-from pages.dashboard import DashboardPage
-from pages.cells import HeatmapPage
-from pages.pack import PackDiagramPage
-from pages.analytics import AnalyticsPage
-from pages.storage import StoragePage
-from pages.settings import SettingsPage, APP_VERSION
-
-# ─────────────────────────────────────────────
-# Configuration
-# ─────────────────────────────────────────────
-FULLSCREEN = False
-WINDOW_WIDTH = 1024
-WINDOW_HEIGHT = 600
-UPDATE_INTERVAL_MS = 100
+PAGE_BUILDERS = (OverviewPage, SegmentDetailsPage, TrendsPage, LogsPage, SetupPage)
 
 
-# ─────────────────────────────────────────────
-# Crash logging — used by both the tick-loop try/except and the global
-# excepthook below, so every uncaught error ends up in one place.
-# ─────────────────────────────────────────────
-def _log_crash(context: str, exc: BaseException):
+def log_crash(context, error):
+    """Never let the crash logger be the thing that kills the dashboard."""
     try:
-        timestamp = datetime.datetime.now().isoformat(timespec="seconds")
-        details = traceback.format_exception(type(exc), exc, exc.__traceback__)
-        with open(CRASH_LOG, "a") as crash_file:
-            crash_file.write("\n" + "=" * 70 + "\n")
-            crash_file.write("[%s] %s\n" % (timestamp, context))
-            crash_file.write("".join(details))
+        if os.path.exists(CRASH_LOG) and os.path.getsize(CRASH_LOG) > 1_000_000:
+            os.replace(CRASH_LOG, CRASH_LOG + ".1")
+        # utf-8 explicitly: tracebacks quote UI strings that carry °C and Δ,
+        # which a cp1252 default encoding would raise on — inside the handler.
+        with open(CRASH_LOG, "a", encoding="utf-8", errors="replace") as handle:
+            handle.write("\n" + "=" * 70 + "\n[%s] %s\n"
+                         % (datetime.datetime.now().isoformat(timespec="seconds"), context))
+            handle.write("".join(traceback.format_exception(
+                type(error), error, error.__traceback__)))
     except Exception:
-        pass  # logging the crash should never itself crash the app
+        pass
 
 
-def _global_excepthook(exc_type, exc_value, exc_tb):
-    """Catches anything NOT already caught by the tick-loop try/except
-    (e.g. a bug in a button click handler). Logs it and keeps the app
-    alive rather than letting Python's default hook tear it down."""
-    _log_crash("uncaught exception", exc_value)
-    traceback.print_exception(exc_type, exc_value, exc_tb)
+def _excepthook(kind, value, tb):
+    log_crash("uncaught exception", value)
+    traceback.print_exception(kind, value, tb)
 
 
-sys.excepthook = _global_excepthook
+sys.excepthook = _excepthook
 
 
-# ─────────────────────────────────────────────
-# RPi display init
-# ─────────────────────────────────────────────
-def _init_rpi_backlight():
-    """Set backlight to maximum on launch. Silent no-op on non-RPi."""
-    import subprocess  # local import: only ever needed on RPi hardware
-
-    candidates = [
-        "/sys/class/backlight/rpi_backlight/brightness",
-        "/sys/class/backlight/10-0045/brightness",
-        "/sys/class/backlight/backlight/brightness",
-    ]
-    for path in candidates:
-        if os.path.exists(path):
-            try:
-                open(path, "w").write("255\n")
-            except PermissionError:
-                try:
-                    subprocess.run(["sudo", "tee", path], input=b"255\n", capture_output=True, timeout=2)
-                except Exception:
-                    pass
-            return
-
-
-# ─────────────────────────────────────────────
-# Main Window
-# ─────────────────────────────────────────────
 class MainWindow(QMainWindow):
-
     def __init__(self):
         super().__init__()
-
-        self.setWindowTitle("Accelerons Electric — BMS Monitor " + APP_VERSION)
-        self.setFixedSize(WINDOW_WIDTH, WINDOW_HEIGHT)
+        self.setWindowTitle("%s — %s" % (APP_NAME, APP_VERSION))
+        self.setFixedSize(SCREEN_W, SCREEN_H)
 
         self.engine = DataEngine()
-        self.logger = Logger(self.engine)
+        self.recorder = Recorder(self.engine)
+        self._pages = {}
+        self._driver = None
+        self._current_index = 0
 
-        _init_rpi_backlight()
-        self.build_ui()
+        backlight.set_max()
+        self._build()
         self.apply_theme()
+        self.set_mode(TM.mode)
 
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.tick)
-        self.timer.start(UPDATE_INTERVAL_MS)
+        self._timer = QTimer(self)
+        self._timer.timeout.connect(self.tick)
+        self._timer.start(TICK_MS)
 
-    # ─────────────────────────────────────────
-    # UI Construction
-    # ─────────────────────────────────────────
-    def build_ui(self):
-        container = QWidget()
-        self.setCentralWidget(container)
+    # ── shells ─────────────────────────────────────────────────────────────
+    def _build(self):
+        self._shells = QStackedWidget()
+        self.setCentralWidget(self._shells)
 
-        root = QVBoxLayout(container)
-        root.setContentsMargins(0, 0, 0, 0)
-        root.setSpacing(0)
+        self._driver_host = QWidget()
+        driver_layout = QVBoxLayout(self._driver_host)
+        driver_layout.setContentsMargins(0, 0, 0, 0)
+        self._shells.addWidget(self._driver_host)
+
+        console = QWidget()
+        column = QVBoxLayout(console)
+        column.setContentsMargins(10, 8, 10, 0)
+        column.setSpacing(8)
+
+        self.strip = StatusStrip()
+        column.addWidget(self.strip)
 
         self.stack = QStackedWidget()
+        column.addWidget(self.stack, 1)
 
-        self.dashboard = DashboardPage(save_cb=self.save_snapshot, logger=self.logger)
-        self.heatmap = HeatmapPage(self.engine)
-        self.pack = PackDiagramPage(self.engine)
-        self.analytics = AnalyticsPage(self.engine)
-        self.storage = StoragePage(self.logger, self.engine)
-        self.settings = SettingsPage(engine=self.engine)
+        self.nav = NavBar()
+        self.nav.page_changed.connect(self.show_page)
+        self.nav.driver_requested.connect(lambda: self.set_mode(DRIVER))
+        column.addWidget(self.nav)
+        self._shells.addWidget(console)
 
-        self.settings.theme_changed.connect(self.apply_theme)
-        self.settings.restart_requested.connect(self.restart_app)
+        self._shortcut("F1", lambda: self.set_mode(
+            ENGINEER if self._shells.currentIndex() == 0 else DRIVER))
+        self._shortcut("F11", self._toggle_fullscreen)
+        self._shortcut("Ctrl+Q", self.close)
 
-        self.pages = [
-            self.dashboard, self.heatmap, self.pack,
-            self.analytics, self.storage, self.settings,
-        ]
-        for page in self.pages:
+    def _shortcut(self, keys, slot):
+        action = QAction(self)
+        action.setShortcut(QKeySequence(keys))
+        action.triggered.connect(slot)
+        self.addAction(action)
+
+    def _toggle_fullscreen(self):
+        self.showNormal() if self.isFullScreen() else self.showFullScreen()
+
+    def set_mode(self, mode):
+        if mode == DRIVER:
+            if self._driver is None:
+                self._driver = DriverPage(self.engine)
+                self._driver.engineer_requested.connect(lambda: self.set_mode(ENGINEER))
+                self._driver_host.layout().addWidget(self._driver)
+            self._shells.setCurrentIndex(0)
+        else:
+            self.show_page(self._current_index)
+            self._shells.setCurrentIndex(1)
+        if TM.mode != mode:
+            TM.mode = mode
+            TM.save()
+        self.refresh_now()
+
+    # ── pages ──────────────────────────────────────────────────────────────
+    def show_page(self, index):
+        page = self._pages.get(index)
+        if page is None:
+            page = self._build_page(index)
+            self._pages[index] = page
             self.stack.addWidget(page)
+        self._current_index = index
+        self.stack.setCurrentWidget(page)
+        self.nav.select_silently(index)
+        self.refresh_now()
 
-        self.navbar = NavBar()
-        self.navbar.page_changed.connect(self.on_nav)
+    def _build_page(self, index):
+        builder = PAGE_BUILDERS[index]
+        if builder is LogsPage:
+            return LogsPage(self.engine, self.recorder)
+        page = builder(self.engine)
+        if builder is SetupPage:
+            page.theme_changed.connect(self.apply_theme)
+            page.brightness_changed.connect(self.apply_brightness)
+            page.mode_changed.connect(self.set_mode)
+            page.restart_requested.connect(self.restart)
+        return page
 
-        root.addWidget(self.stack, 1)
-        root.addWidget(self.navbar)
-
-    # ─────────────────────────────────────────
-    # Navigation
-    # ─────────────────────────────────────────
-    def on_nav(self, index):
-        self.stack.setCurrentIndex(index)
-
-    # ─────────────────────────────────────────
-    # Theme
-    # ─────────────────────────────────────────
+    # ── theme ──────────────────────────────────────────────────────────────
     def apply_theme(self):
-        self.setStyleSheet(get_qss())
-        self.setWindowOpacity(TM.brightness)
-        self.dashboard.logo_widget.update()
-        self.dashboard._gauge.update()
-        self.analytics.update_graph_theme()
+        self.setStyleSheet(stylesheet())
+        restyle_tree(self)
+        self.apply_brightness(TM.brightness)
+        self.strip.restyle()
+        for page in list(self._pages.values()) + ([self._driver] if self._driver else []):
+            page.on_theme_changed()
+        self.refresh_now()
 
-    # ─────────────────────────────────────────
-    # Main Update Loop — crash-isolated (v20)
-    # ─────────────────────────────────────────
+    def apply_brightness(self, fraction):
+        # Real panel first; window opacity is only the desktop fallback.
+        if not backlight.apply(fraction):
+            self.setWindowOpacity(max(0.45, fraction))
+
+    # ── loop ───────────────────────────────────────────────────────────────
     def tick(self):
         try:
             self.engine.tick()
-            self.logger.record()
+            self.recorder.record()
+            self._refresh_visible()
+        except Exception as error:
+            log_crash("tick frame", error)
 
-            page = self.stack.currentWidget()
-            page.refresh(self.engine, self.logger)
-
-        except Exception as e:
-            # One bad frame must never take the whole dashboard down mid
-            # session. Log it, skip this frame, keep the 10Hz timer going.
-            _log_crash("tick() frame error", e)
-
-    # ─────────────────────────────────────────
-    # Save snapshot
-    # ─────────────────────────────────────────
-    def save_snapshot(self):
+    def refresh_now(self):
         try:
-            path = self.logger.save_snapshot()
-            QMessageBox.information(self, "Saved", "Snapshot saved:\n" + path)
-            self.storage._refresh()
-        except Exception as e:
-            QMessageBox.critical(self, "Error", str(e))
+            self._refresh_visible()
+        except Exception as error:
+            log_crash("forced refresh", error)
 
-    # ─────────────────────────────────────────
-    # Shutdown / restart (v20)
-    # ─────────────────────────────────────────
+    def _refresh_visible(self):
+        if self._shells.currentIndex() == 0:
+            if self._driver is not None:
+                self._driver.refresh(self.engine, self.recorder)
+            return
+        self.strip.refresh(self.engine, self.recorder)
+        page = self.stack.currentWidget()
+        if page is not None:
+            page.refresh(self.engine, self.recorder)
+
+    # ── shutdown ───────────────────────────────────────────────────────────
+    def _cleanup(self):
+        try:
+            self._timer.stop()
+            self.recorder.stop()
+            self.engine.stream.stop()
+        except Exception as error:
+            log_crash("cleanup", error)
+
     def closeEvent(self, event):
-        """Make sure nothing is lost if the app is closed mid-session."""
-        try:
-            self.logger.stop()  # flushes any buffered rows
-            self.engine.stop_streaming()
-        except Exception as e:
-            _log_crash("closeEvent cleanup error", e)
+        self._cleanup()
         event.accept()
 
-    def restart_app(self):
-        """Manual restart from the Settings page: flush/stop cleanly, then
-        re-exec the current process with the same interpreter and argv.
-        Crash-triggered restarts are handled separately by the systemd
-        service (see install.sh) — this is only for the in-app button."""
-        try:
-            self.logger.stop()
-            self.engine.stop_streaming()
-        except Exception as e:
-            _log_crash("restart_app cleanup error", e)
+    def restart(self):
+        self._cleanup()
         os.execv(sys.executable, [sys.executable] + sys.argv)
 
 
-# ─────────────────────────────────────────────
-# Application Entry
-# ─────────────────────────────────────────────
 def main():
     QApplication.setAttribute(Qt.AA_DisableHighDpiScaling)
-    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, False)
     app = QApplication(sys.argv)
-
-    app.setApplicationName("Accelerons Electric BMS")
-    app.setFont(QFont("Inter", 11))
+    app.setApplicationName(APP_NAME)
+    app.setFont(QFont(TM.font_family, 10))
 
     window = MainWindow()
-
     if FULLSCREEN:
-        window.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
+        window.setWindowFlags(Qt.FramelessWindowHint)
         window.showFullScreen()
         app.setOverrideCursor(QCursor(Qt.BlankCursor))
     else:
         screen = app.primaryScreen().geometry()
-        window.move(
-            (screen.width() - WINDOW_WIDTH) // 2,
-            (screen.height() - WINDOW_HEIGHT) // 2,
-        )
+        window.move((screen.width() - SCREEN_W) // 2, (screen.height() - SCREEN_H) // 2)
         window.show()
-
     return app.exec_()
+
 
 if __name__ == "__main__":
     sys.exit(main())

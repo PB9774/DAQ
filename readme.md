@@ -5,70 +5,33 @@ car's battery pack: 7 segments, 14 cells per segment, 7 temperature
 sensors per segment. Built to run on a 1024×600 7" Raspberry Pi display
 in the car, and on a laptop for pit-side monitoring and development.
 
-**Version:** v20
+**Version:** v21
 
 ---
 
 ## Architecture
 
-The codebase is a layered pipeline: one class owns all the data, one
-class owns the update loop, and everything else just reads and displays.
+The app separates telemetry and recording from the Qt interface. A single
+engine owns pack state, while the main window updates only the visible screen.
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│  ev.py                                                    │
-│  DataEngine — owns every number in the app                │
-│  Logger     — owns every file written to disk              │
-└─────────────────────────────────────────────────────────┘
-                          │  .tick() every 100ms
-                          ▼
-┌─────────────────────────────────────────────────────────┐
-│  main.py                                                   │
-│  MainWindow — owns the QTimer, the page stack, and the      │
-│  nav bar. tick() pulls fresh data from DataEngine and        │
-│  hands it to whichever page is currently on screen.           │
-└─────────────────────────────────────────────────────────┘
-                          │  page.refresh(engine, logger)
-                          ▼
-┌─────────────────────────────────────────────────────────┐
-│  pages/  — six screens, one file each                       │
-│  dashboard.py · cells.py · pack.py · analytics.py ·           │
-│  storage.py · settings.py                                      │
-│                                                                   │
-│  pages/common.py — shared pieces used by more than one page       │
-│  (_FaultPanel, _SegPanel, color/style helpers)                     │
-└─────────────────────────────────────────────────────────┘
-                          │  built from
-                          ▼
-┌─────────────────────────────────────────────────────────┐
-│  widgets.py  — general-purpose widgets, not page-specific    │
-│  LogoWidget · TelemetryStrip · NavBar                            │
-│                                                                     │
-│  theme.py — palette, font scale, brightness/contrast, QSS builder   │
-└─────────────────────────────────────────────────────────┘
+main.py       Qt app, screen navigation, and update loop
+core/         telemetry engine, data sources, faults, recording, streaming
+pages/        driver, overview, segments, trends, logs, and setup screens
+ui/           shared gauges, grids, widgets, theme, and navigation
+assets/       team logos
 ```
 
 **Directory layout:**
 
 ```
-main.py                   Entry point, MainWindow, tick loop, crash isolation
-ev.py                     DataEngine (all state + fault detection) and Logger
-theme.py                  Dark/light palettes, typography, brightness/contrast
-widgets.py                Shared non-page widgets
-install.sh                Raspberry Pi setup script
-requirements.txt          Dev-machine pip dependencies
-
-pages/
-    common.py               Shared widgets used by 2+ pages
-    dashboard.py             Page 1
-    cells.py                  Page 2
-    pack.py                    Page 3
-    analytics.py                Page 4
-    storage.py                   Page 5
-    settings.py                   Page 6
-
-assets/                   Team logo images
-logs/                     CSVs, fault log, crash log (all generated at runtime)
+main.py
+core/     config.py · engine.py · faults.py · sources.py · recorder.py · stream.py
+pages/    driver.py · overview.py · cells.py · trends.py · logs.py · setup.py
+ui/       chrome.py · cellgrid.py · faultpanel.py · gauges.py · helpers.py
+          theme.py · tokens.py · widgets.py
+install.sh
+requirements.txt
 ```
 
 **Why it's built this way:**
@@ -77,125 +40,47 @@ logs/                     CSVs, fault log, crash log (all generated at runtime)
   fault-detection math could be unit-tested with no GUI involved at all
   (not currently done — see the roadmap below).
 - Only the **currently visible** page gets `.refresh()` called each tick.
-  This is the main reason the app can run 5 live graphs, a 98-cell grid,
+  This is the main reason the app can run live graphs, a 98-cell grid,
   and a fault panel at 10Hz on a Raspberry Pi without lagging — none of
   that work happens for pages you're not looking at.
 - Pages read `DataEngine` through a fixed set of properties
-  (`pack_voltage`, `delta_v`, `tmax`, `active_faults`, etc.) rather than
-  reaching into its internals. That boundary is what will make swapping
-  simulated data for real CAN data a change to one file (`ev.py`) instead
-  of six.
+  (`pack_voltage`, `delta_v`, `tmax`, `faults`, etc.) rather than reaching
+  into its internals.
 
 ---
 
 ## Screens
 
-### 1. Dashboard (`pages/dashboard.py`)
+### 1. Engineer Overview (`pages/overview.py`)
 
-**Motto:** _Everything you need in one glance — nothing you don't._
+- State of charge and remaining energy
+- Pack voltage, current, power, cell spread and temperature metrics
+- Health summary for all seven segments
+- Active faults, ordered by severity
 
-**Purpose:** The screen a driver or pit crew member looks at 95% of the
-time. Answers "is everything okay right now?" in under a second.
+### 2. Segment Details (`pages/cells.py`)
 
-**Features:**
+- Cell voltage and temperature grids side by side, grouped by segment
+- Highest and lowest cell readings, pack average and off-band count
+- Pack-wide temperature maximum, minimum, average and spread
 
-- Live speed on a hand-painted 7-segment display
-- State of charge (SOC) as a number + colored bar
-- Pack voltage and current
-- ΔV — the gap between the highest and lowest cell voltage, the single
-  most important pack-health number
-- Highest/lowest temperature in the pack, and exactly which cell
-- Per-segment health bars (all 7 segments, color-coded, at a glance)
-- Live fault list, worst-first, color-coded by severity
-- One-tap "Save Snapshot" button
-- Header strip: clock, CAN status, sensor status, recording indicator,
-  live tick rate
+### 3. Trends (`pages/trends.py`)
 
-### 2. Cell Heatmap (`pages/cells.py`)
+- Selectable voltage, current, power, SOC, temperature and cell-spread charts
+- Adjustable 1 / 5 / 10 / 30 minute window
+- Auto-scaled chart and current/minimum/maximum/average values
 
-**Motto:** _No cell hides from view._
+### 4. Logs (`pages/logs.py`)
 
-**Purpose:** The zoomed-in screen — when the Dashboard says "something's
-off," this is where you find out exactly which cell and by how much.
+- Start/stop CSV recording and save snapshots
+- Start/stop the TCP telemetry feed (JSON lines, port 9000)
+- Browse, inspect and export recorded CSV files
 
-**Features:**
+### 5. Setup (`pages/setup.py`)
 
-- All 98 individual cell voltages, color-coded green/yellow/red
-- All 49 temperature sensors, color-coded the same way
-- The single highest and lowest voltage cell highlighted with a border
-- One panel per segment (7 total), each showing its own health badge
-- A legend explaining the color coding
-- Pack-wide Tmax/Tmin summary at the top
-
-### 3. Pack Diagram (`pages/pack.py`)
-
-**Motto:** _See the whole pack's health without hunting for numbers._
-
-**Purpose:** A simplified, zoomed-out version of the heatmap — for
-quickly comparing all 7 segments against each other rather than staring
-at 98 individual numbers.
-
-**Features:**
-
-- 7 segment tiles, laid out to mirror the physical pack
-- Switchable coloring mode: by health, by average voltage, or by max
-  temperature
-- Per-segment average voltage, max temperature, and health badge
-- One-line summary at the bottom ("All segments nominal" / "N critical,
-  M warning segments")
-
-### 4. Analytics (`pages/analytics.py`)
-
-**Motto:** _Watch the trend, not just the moment._
-
-**Purpose:** Everything else on the app is "right now" — this screen is
-"how did we get here?" Useful for spotting slow drift (e.g. one cell
-creeping toward imbalance over a session) that a single glance would
-never catch.
-
-**Features:**
-
-- 5 live charts: pack voltage + current (dual axis), SOC, power (kW),
-  max cell temperature, and cell voltage imbalance (ΔV)
-- Adjustable time window: 1 / 5 / 10 / 20 / 30 minutes
-- Auto-scaling Y-axis per chart
-- Tab-based switching between charts
-
-### 5. Storage (`pages/storage.py`)
-
-**Motto:** _Nothing recorded is nothing learned._
-
-**Purpose:** Turns the dashboard from "a screen you watch" into "a
-record you can review." Also the bridge to a second machine watching the
-same data live.
-
-**Features:**
-
-- Start/stop continuous CSV recording, with live duration + file size
-- Start/stop a TCP telemetry stream (JSON lines, port 9000) for a second
-  device to tap into live data
-- Browse all past recordings and fault logs
-- Open any CSV in a built-in table viewer
-- Export any log file
-
-### 6. Settings (`pages/settings.py`)
-
-**Motto:** _Make the dashboard work the way your team works._
-
-**Purpose:** Everything about how the dashboard looks and behaves,
-separated from everything about what it's showing — so the team can
-tune it for the pit garage, the car, or a teammate's eyes without
-touching any other screen.
-
-**Features:**
-
-- Dark / light theme toggle
-- Font size (S/M/L) and font family
-- Brightness (dims the Raspberry Pi's actual backlight) and contrast
-- Data source toggle: Idle (no signal) / Simulated data — the only
-  control in the whole app that turns test data on or off
-- Manual "Restart App Now" button
-- About panel: app name, version, team, department, institution
+- Theme, font scale, typeface and brightness preferences
+- Idle/simulated data source and startup mode
+- Restart action and system information
 
 ---
 

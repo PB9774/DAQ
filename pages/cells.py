@@ -1,85 +1,101 @@
-"""
-pages/cells.py — per-segment cell voltage/temperature heatmap grid.
-Split out of the old monolithic pages.py.
-"""
+"""Segment-level voltage and temperature detail."""
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea, QGridLayout
+from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
 
-from ev import DataEngine
-from widgets import TelemetryStrip
+from core.config import SERIES_CELLS
+from core.faults import CELL_V_WARN_HI, CELL_V_WARN_LO
+from ui.cellgrid import CellGrid, TempGrid
+from ui.helpers import (
+    card, dv_status, label, numeral, rule, set_mono_min_width, set_scaled_height,
+    set_text, style_numeral,
+)
+from ui.theme import Color
 
-from pages.common import _SegPanel
 
-
-class HeatmapPage(QWidget):
-    def __init__(self, engine: DataEngine, parent=None):
+class SegmentDetailsPage(QWidget):
+    def __init__(self, engine, parent=None):
         super().__init__(parent)
-        self._panels = []
-        self._strip = TelemetryStrip()
-        self._build()
+        self._spread_status = None
 
-    def _build(self):
         outer = QVBoxLayout(self)
-        outer.setContentsMargins(0, 0, 0, 0)
-        outer.setSpacing(0)
+        outer.setContentsMargins(6, 6, 6, 6)
+        outer.setSpacing(6)
+        outer.addWidget(self._build_summary())
 
-        top = QWidget()
-        tl = QVBoxLayout(top)
-        tl.setContentsMargins(5, 4, 5, 2)
-        tl.setSpacing(3)
-        tl.addWidget(self._strip)
+        grids = QHBoxLayout()
+        grids.setSpacing(6)
+        self.grid = CellGrid()
+        grids.addWidget(self._grid_card("CELL VOLTAGE", "98 cells · 7 segments", self.grid), 1)
+        self.temps = TempGrid()
+        self._temp_summary = label("", role="caption", mono=True)
+        grids.addWidget(self._grid_card("TEMPERATURE", self._temp_summary, self.temps), 1)
+        outer.addLayout(grids, 1)
 
-        # legend + Tmax/Tmin summary
-        meta = QHBoxLayout()
-        meta.setContentsMargins(0, 0, 0, 0)
-        meta.setSpacing(16)
-        for fg, bg, label in [
-            ("#4ade80", "#0a5018", "OK 3.55-3.90V"),
-            ("#fcd34d", "#78350f", "LOW <3.35V"),
-            ("#fca5a5", "#7f1d1d", "HIGH >3.90V"),
-        ]:
-            dot = QLabel("■")
-            dot.setStyleSheet("color:" + fg + ";font-size:14px;background:" + bg + ";border-radius:2px;padding:0 3px;")
-            txt = QLabel(label)
-            txt.setStyleSheet("font-size:13px;font-weight:600;background:transparent;border:none;")
-            meta.addWidget(dot)
-            meta.addWidget(txt)
-        meta.addSpacing(14)
+    @staticmethod
+    def _grid_card(title, summary, grid):
+        frame, column = card(margins=(10, 6, 10, 6), spacing=4)
+        column.addWidget(label(title, role="title"))
+        column.addWidget(label(summary, role="caption") if isinstance(summary, str) else summary)
+        column.addWidget(grid, 1)
+        return frame
 
-        self._tmax_lbl = QLabel("Tmax: --°C")
-        self._tmax_lbl.setStyleSheet("color:#EF4444;font-size:14px;font-weight:700;background:transparent;border:none;")
-        self._tmin_lbl = QLabel("Tmin: --°C")
-        self._tmin_lbl.setStyleSheet("color:#22C55E;font-size:14px;font-weight:700;background:transparent;border:none;")
-        meta.addWidget(self._tmax_lbl)
-        meta.addWidget(self._tmin_lbl)
-        meta.addStretch()
-        tl.addLayout(meta)
-        outer.addWidget(top)
+    def _build_summary(self):
+        frame, row = card(margins=(12, 6, 12, 6), spacing=10, vertical=False)
+        set_scaled_height(frame, "LEAD", 2.5, 50)
 
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        scroll.setStyleSheet("background:transparent;border:none;")
+        self._readouts = {}
+        specs = (
+            ("HIGH", "high", Color.ACCENT, "3.951"),
+            ("LOW", "low", Color.SPEED, "3.951"),
+            ("SPREAD", "spread", Color.TEXT, "800 mV"),
+            ("AVG", "avg", Color.TEXT, "3.710 V"),
+            ("OFF-BAND", "band", Color.TEXT, "00 cells"),
+        )
+        for index, (title, key, colour, sample) in enumerate(specs):
+            if index:
+                row.addWidget(rule(vertical=True, length=24))
+            row.addWidget(label(title, role="title"))
+            value = numeral("--", "LEAD", colour, Qt.AlignLeft | Qt.AlignVCenter)
+            set_mono_min_width(value, sample, "LEAD", 2)
+            self._readouts[key] = value
+            row.addWidget(value)
+        row.addStretch()
+        return frame
 
-        cont = QWidget()
-        grid = QGridLayout(cont)
-        grid.setContentsMargins(5, 2, 5, 5)
-        grid.setSpacing(6)
-        grid.setColumnStretch(0, 1)
-        grid.setColumnStretch(1, 1)
-        for i in range(DataEngine.NUM_MODULES):
-            p = _SegPanel(i)
-            self._panels.append(p)
-            grid.addWidget(p, i // 2, i % 2)
-        scroll.setWidget(cont)
-        outer.addWidget(scroll, 1)
+    def refresh(self, engine, recorder=None):
+        readouts = self._readouts
+        set_text(readouts["high"], "%.3f" % engine.vmax)
+        set_text(readouts["low"], "%.3f" % engine.vmin)
+        high_tip = "Highest cell: %s" % engine.vmax_location
+        low_tip = "Lowest cell: %s" % engine.vmin_location
+        if readouts["high"].toolTip() != high_tip:
+            readouts["high"].setToolTip(high_tip)
+        if readouts["low"].toolTip() != low_tip:
+            readouts["low"].setToolTip(low_tip)
+        set_text(readouts["spread"], "%.0f mV" % (engine.delta_v * 1000))
+        set_text(readouts["avg"], "%.3f V" % (engine.pack_voltage / SERIES_CELLS))
+        set_text(self._temp_summary, "MAX %.0f° · AVG %.0f° · MIN %.0f°"
+                 % (engine.tmax, engine.avg_temperature, engine.tmin))
+        spread_tip = "Temperature spread: %.1f°C" % (engine.tmax - engine.tmin)
+        if self._temp_summary.toolTip() != spread_tip:
+            self._temp_summary.setToolTip(spread_tip)
 
-    def refresh(self, engine, logger=None):
-        self._strip.refresh(engine, logger)
-        max_loc, max_v, min_loc, min_v = engine.cell_global_extremes()
-        self._tmax_lbl.setText("Tmax: %.0f°C" % engine.tmax)
-        self._tmin_lbl.setText("Tmin: %.0f°C" % engine.tmin)
-        for i, p in enumerate(self._panels):
-            p.refresh(engine.modules[i], max_loc, min_loc)
+        status = dv_status(engine.delta_v)
+        if status != self._spread_status:
+            self._spread_status = status
+            style_numeral(readouts["spread"], "LEAD", Color.status(status))
+
+        # Only worth scanning the pack when an extreme says a cell can be out.
+        outside = 0
+        if engine.vmax > CELL_V_WARN_HI or engine.vmin < CELL_V_WARN_LO:
+            outside = sum(1 for module in engine.modules for cell in module.cells
+                          if cell.voltage > CELL_V_WARN_HI or cell.voltage < CELL_V_WARN_LO)
+        set_text(readouts["band"], "%d cells" % outside)
+        self.grid.set_data(engine)
+        self.temps.set_data(engine)
+
+    def on_theme_changed(self):
+        self._spread_status = None
+        self.grid.update()
+        self.temps.update()

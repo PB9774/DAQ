@@ -1,0 +1,230 @@
+"""
+ui/cellgrid.py — painted pack grids.
+
+The old page put a styled QLabel behind every cell (147 of them) and called
+setStyleSheet() on each one ten times a second. These widgets draw the same
+information in a single paintEvent, and skip even that when no displayed digit
+has changed.
+"""
+
+from PyQt5.QtCore import Qt, QRectF
+from PyQt5.QtGui import QColor, QFont, QPainter, QPen
+from PyQt5.QtWidgets import QSizePolicy, QWidget
+
+from core.config import CELLS_PER_SEGMENT, NTC_PER_SEGMENT, SEGMENTS
+from ui.helpers import cell_v_status, set_scaled_height, temp_status
+from ui.theme import Color
+from ui.tokens import MONO_QFONT
+
+_GAP = 4.0
+_HEADER = 16.0
+
+
+def _blend(base, over, amount):
+    return QColor(
+        int(base.red() + (over.red() - base.red()) * amount),
+        int(base.green() + (over.green() - base.green()) * amount),
+        int(base.blue() + (over.blue() - base.blue()) * amount),
+    )
+
+
+def _cell_paint(voltage):
+    status = cell_v_status(voltage)
+    fg = QColor(Color.status(status))
+    tint = QColor(Color.tint(status))
+    if status == "ok":
+        # Inside the healthy band, lean warmer as the cell approaches the top.
+        amount = max(0.0, min(1.0, (voltage - 3.55) / 0.35)) * 0.55
+        tint = _blend(QColor(Color.CARD_HI), tint, 0.30 + amount)
+    return tint, fg
+
+
+def _temp_paint(temperature):
+    status = temp_status(temperature)
+    if status == "ok":
+        # A flat fill hides the gradient that matters on a thermal page, so
+        # healthy sensors still warm towards amber across the working range.
+        amount = max(0.0, min(1.0, (temperature - 26.0) / 16.0)) * 0.55
+        return _blend(QColor(Color.CARD_HI), QColor(Color.tint("warn")), amount), QColor(Color.TEXT_2)
+    return QColor(Color.tint(status)), QColor(Color.status(status))
+
+
+class _Grid(QWidget):
+    """Shared geometry: one column per segment, N rows of boxes, top header."""
+
+    ROWS = 1
+    TAG = "C%d"
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._values = ()
+        self._marks = (-1, -1)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.setMinimumHeight(int(_HEADER + self.ROWS * 22))
+
+    def paintEvent(self, _event):
+        if not self._values:
+            return
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing, True)
+
+        box_w = (self.width() - _GAP * (SEGMENTS - 1)) / SEGMENTS
+        box_h = (self.height() - _HEADER - _GAP * (self.ROWS - 1)) / self.ROWS
+
+        tag_font = QFont(MONO_QFONT)
+        tag_font.setPixelSize(max(9, min(13, int(box_h * 0.42))))
+        value_font = QFont(MONO_QFONT)
+        value_font.setPixelSize(max(11, min(17, int(box_h * 0.52))))
+        value_font.setBold(True)
+
+        painter.setFont(tag_font)
+        painter.setPen(QPen(QColor(Color.TEXT_3)))
+        for segment in range(SEGMENTS):
+            head = QRectF(segment * (box_w + _GAP), 0, box_w, _HEADER)
+            painter.drawText(head, Qt.AlignCenter, "SEG %d" % (segment + 1))
+
+        for index, value in enumerate(self._values):
+            segment, row = divmod(index, self.ROWS)
+            box = QRectF(segment * (box_w + _GAP), _HEADER + row * (box_h + _GAP), box_w, box_h)
+            bg, fg = self.paint_for(value)
+            self._draw_box(painter, box, bg, fg, index)
+            self._draw_text(painter, box, tag_font, value_font, fg,
+                            self.TAG % (row + 1), self.format(value))
+
+    def _draw_box(self, painter, box, bg, fg, index):
+        high, low = self._marks
+        painter.setBrush(bg)
+        if index == high:
+            painter.setPen(QPen(QColor(Color.ACCENT), 2))
+        elif index == low:
+            painter.setPen(QPen(QColor(Color.SPEED), 2))
+        else:
+            edge = QColor(fg)
+            edge.setAlpha(70)
+            painter.setPen(QPen(edge, 1))
+        painter.drawRoundedRect(box, 4, 4)
+
+    @staticmethod
+    def _draw_text(painter, box, tag_font, value_font, fg, tag, value):
+        faded = QColor(fg)
+        faded.setAlpha(160)
+        painter.setPen(QPen(faded))
+        painter.setFont(tag_font)
+        painter.drawText(box.adjusted(7, 0, -7, 0), Qt.AlignLeft | Qt.AlignVCenter, tag)
+        painter.setPen(QPen(fg))
+        painter.setFont(value_font)
+        painter.drawText(box.adjusted(7, 0, -7, 0), Qt.AlignRight | Qt.AlignVCenter, value)
+
+
+class CellGrid(_Grid):
+    """All 98 cell voltages: segments across, cells down."""
+
+    ROWS = CELLS_PER_SEGMENT
+    TAG = "C%02d"
+
+    def set_data(self, engine):
+        values = tuple(round(cell.voltage, 3)
+                       for module in engine.modules for cell in module.cells)
+        marks = (self._locate(engine.vmax_location), self._locate(engine.vmin_location))
+        if values == self._values and marks == self._marks:
+            return
+        self._values, self._marks = values, marks
+        self.update()
+
+    @staticmethod
+    def _locate(location):
+        try:
+            segment = int(location[1:location.index("C")]) - 1
+            cell = int(location[location.index("C") + 1:]) - 1
+        except (ValueError, IndexError):
+            return -1
+        return segment * CELLS_PER_SEGMENT + cell
+
+    paint_for = staticmethod(_cell_paint)
+
+    @staticmethod
+    def format(value):
+        return "%.3f" % value
+
+
+class TempGrid(_Grid):
+    """All 49 NTCs: segments across, sensors down."""
+
+    ROWS = NTC_PER_SEGMENT
+    TAG = "T%d"
+
+    def set_data(self, engine):
+        values = tuple(
+            round((module.cells[2 * i].temperature + module.cells[2 * i + 1].temperature) / 2.0, 1)
+            for module in engine.modules for i in range(NTC_PER_SEGMENT)
+        )
+        if values == self._values:
+            return
+        self._values = values
+        self.update()
+
+    paint_for = staticmethod(_temp_paint)
+
+    @staticmethod
+    def format(value):
+        return "%.0f°" % value
+
+
+class SegmentHealthBar(QWidget):
+    """Seven chips: segment tag, average volts, hot spot, tinted by health."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._rows = ()
+        set_scaled_height(self, "SMALL", 3.9, 58)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
+    def set_data(self, stats):
+        rows = tuple((s.health, round(s.avg_v, 3), round(s.max_t), round(s.delta_v, 3))
+                     for s in stats)
+        if rows == self._rows:
+            return
+        self._rows = rows
+        self.update()
+
+    def paintEvent(self, _event):
+        if not self._rows:
+            return
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing, True)
+
+        count = len(self._rows)
+        width = (self.width() - _GAP * (count - 1)) / count
+        height = float(self.height())
+
+        tag_font = QFont(MONO_QFONT)
+        tag_font.setPixelSize(max(10, int(height * 0.20)))
+        tag_font.setBold(True)
+        value_font = QFont(MONO_QFONT)
+        value_font.setPixelSize(max(12, int(height * 0.27)))
+        value_font.setBold(True)
+
+        for index, (health, avg_v, max_t, delta_v) in enumerate(self._rows):
+            box = QRectF(index * (width + _GAP), 0.0, width, height - 1)
+            fg = QColor(Color.status(health))
+            painter.setBrush(QColor(Color.CARD_HI) if health == "ok"
+                             else QColor(Color.tint(health)))
+            edge = QColor(fg)
+            edge.setAlpha(110 if health == "ok" else 220)
+            painter.setPen(QPen(edge, 1.5))
+            painter.drawRoundedRect(box, 6, 6)
+
+            painter.setFont(tag_font)
+            painter.setPen(QPen(QColor(Color.TEXT_3)))
+            painter.drawText(box.adjusted(8, 4, -8, 0), Qt.AlignLeft | Qt.AlignTop,
+                             "SEG %d" % (index + 1))
+            painter.drawText(box.adjusted(8, 4, -8, 0), Qt.AlignRight | Qt.AlignTop,
+                             "%d°C" % max_t)
+            painter.setFont(value_font)
+            painter.setPen(QPen(QColor(Color.TEXT) if health == "ok" else fg))
+            painter.drawText(box.adjusted(8, 0, -8, -3), Qt.AlignLeft | Qt.AlignBottom,
+                             "%.3f V" % avg_v)
+            painter.setFont(tag_font)
+            painter.setPen(QPen(QColor(Color.TEXT_2)))
+            painter.drawText(box.adjusted(8, 0, -8, -4), Qt.AlignRight | Qt.AlignBottom,
+                             "Δ %.0f mV" % (delta_v * 1000))
