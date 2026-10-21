@@ -1,16 +1,18 @@
 """Segment-level voltage and temperature detail."""
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import (
+    QFrame, QHBoxLayout, QScrollArea, QScroller, QVBoxLayout, QWidget,
+)
 
 from core.config import SERIES_CELLS
 from core.faults import CELL_V_WARN_HI, CELL_V_WARN_LO
-from ui.cellgrid import CellGrid, TempGrid
+from ui.cellgrid import CellGrid, SegmentHeader, TempGrid
 from ui.helpers import (
     card, dv_status, label, numeral, rule, set_mono_min_width, set_scaled_height,
     set_text, style_numeral,
 )
-from ui.theme import Color
+from ui.theme import Color, TM
 
 
 class SegmentDetailsPage(QWidget):
@@ -26,11 +28,36 @@ class SegmentDetailsPage(QWidget):
         grids = QHBoxLayout()
         grids.setSpacing(6)
         self.grid = CellGrid()
-        grids.addWidget(self._grid_card("CELL VOLTAGE", "98 cells · 7 segments", self.grid), 1)
+        grids.addWidget(self._build_cell_card(), 1)
         self.temps = TempGrid()
         self._temp_summary = label("", role="caption", mono=True)
         grids.addWidget(self._grid_card("TEMPERATURE", self._temp_summary, self.temps), 1)
         outer.addLayout(grids, 1)
+
+    def _build_cell_card(self):
+        frame, column = card(margins=(10, 6, 10, 6), spacing=4)
+        column.addWidget(label("CELL VOLTAGE", role="title"))
+        column.addWidget(label("98 cells · 7 segments", role="caption"))
+
+        self.cell_scroll = QScrollArea()
+        self.cell_scroll.setObjectName("grid_scroll")
+        self.cell_scroll.setWidgetResizable(True)
+        self.cell_scroll.setFrameShape(QFrame.NoFrame)
+        self.cell_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.cell_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.cell_scroll.setFocusPolicy(Qt.StrongFocus)
+        self.cell_scroll.verticalScrollBar().setSingleStep(self.grid.BASE_ROW_H or 32)
+        self.cell_scroll.setWidget(self.grid)
+
+        try:
+            QScroller.grabGesture(self.cell_scroll.viewport(), QScroller.LeftMouseButtonGesture)
+        except Exception:
+            pass
+
+        self.grid_header = SegmentHeader(self.cell_scroll)
+        column.addWidget(self.grid_header)
+        column.addWidget(self.cell_scroll, 1)
+        return frame
 
     @staticmethod
     def _grid_card(title, summary, grid):
@@ -97,5 +124,12 @@ class SegmentDetailsPage(QWidget):
 
     def on_theme_changed(self):
         self._spread_status = None
+        self.grid.update_geometry()
         self.grid.update()
+        if hasattr(self, "grid_header"):
+            self.grid_header.update()
+        if hasattr(self, "cell_scroll"):
+            step = int(round((self.grid.BASE_ROW_H or 50) * TM.font_scale))
+            self.cell_scroll.verticalScrollBar().setSingleStep(step)
+        self.temps.update_geometry()
         self.temps.update()

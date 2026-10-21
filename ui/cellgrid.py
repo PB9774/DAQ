@@ -7,13 +7,13 @@ information in a single paintEvent, and skip even that when no displayed digit
 has changed.
 """
 
-from PyQt5.QtCore import Qt, QRectF
+from PyQt5.QtCore import Qt, QRectF, QEvent
 from PyQt5.QtGui import QColor, QFont, QPainter, QPen
 from PyQt5.QtWidgets import QSizePolicy, QWidget
 
 from core.config import CELLS_PER_SEGMENT, NTC_PER_SEGMENT, SEGMENTS
 from ui.helpers import cell_v_status, set_scaled_height, temp_status
-from ui.theme import Color
+from ui.theme import Color, TM
 from ui.tokens import MONO_QFONT
 
 _GAP = 4.0
@@ -54,13 +54,24 @@ class _Grid(QWidget):
 
     ROWS = 1
     TAG = "C%d"
+    HAS_HEADER = True
+    BASE_ROW_H = None
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, has_header=None):
         super().__init__(parent)
         self._values = ()
         self._marks = (-1, -1)
+        self.has_header = self.HAS_HEADER if has_header is None else has_header
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.setMinimumHeight(int(_HEADER + self.ROWS * 22))
+        self.update_geometry()
+
+    def update_geometry(self):
+        header_h = _HEADER if self.has_header else 0.0
+        if self.BASE_ROW_H is not None:
+            row_h = int(round(self.BASE_ROW_H * TM.font_scale))
+            self.setMinimumHeight(int(header_h + self.ROWS * row_h + _GAP * (self.ROWS - 1)))
+        else:
+            self.setMinimumHeight(int(header_h + self.ROWS * 22))
 
     def paintEvent(self, _event):
         if not self._values:
@@ -68,24 +79,35 @@ class _Grid(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing, True)
 
+        header_h = _HEADER if self.has_header else 0.0
         box_w = (self.width() - _GAP * (SEGMENTS - 1)) / SEGMENTS
-        box_h = (self.height() - _HEADER - _GAP * (self.ROWS - 1)) / self.ROWS
+        if self.BASE_ROW_H is not None:
+            min_row_h = int(round(self.BASE_ROW_H * TM.font_scale))
+            avail = self.height() - header_h - _GAP * (self.ROWS - 1)
+            box_h = max(min_row_h, avail / self.ROWS)
+        else:
+            box_h = (self.height() - header_h - _GAP * (self.ROWS - 1)) / self.ROWS
 
         tag_font = QFont(MONO_QFONT)
-        tag_font.setPixelSize(max(9, min(13, int(box_h * 0.42))))
+        tag_font.setStyleHint(QFont.Monospace)
+        tag_font.setFamilies(["JetBrains Mono", "DejaVu Sans Mono", "Consolas", "monospace"])
+        tag_font.setPixelSize(max(9, min(10, int(box_h * 0.32))))
         value_font = QFont(MONO_QFONT)
-        value_font.setPixelSize(max(11, min(17, int(box_h * 0.52))))
+        value_font.setStyleHint(QFont.Monospace)
+        value_font.setFamilies(["JetBrains Mono", "DejaVu Sans Mono", "Consolas", "monospace"])
+        value_font.setPixelSize(max(11, min(13, int(box_h * 0.40))))
         value_font.setBold(True)
 
-        painter.setFont(tag_font)
-        painter.setPen(QPen(QColor(Color.TEXT_3)))
-        for segment in range(SEGMENTS):
-            head = QRectF(segment * (box_w + _GAP), 0, box_w, _HEADER)
-            painter.drawText(head, Qt.AlignCenter, "SEG %d" % (segment + 1))
+        if self.has_header:
+            painter.setFont(tag_font)
+            painter.setPen(QPen(QColor(Color.TEXT_3)))
+            for segment in range(SEGMENTS):
+                head = QRectF(segment * (box_w + _GAP), 0, box_w, _HEADER)
+                painter.drawText(head, Qt.AlignCenter, "SEG %d" % (segment + 1))
 
         for index, value in enumerate(self._values):
             segment, row = divmod(index, self.ROWS)
-            box = QRectF(segment * (box_w + _GAP), _HEADER + row * (box_h + _GAP), box_w, box_h)
+            box = QRectF(segment * (box_w + _GAP), header_h + row * (box_h + _GAP), box_w, box_h)
             bg, fg = self.paint_for(value)
             self._draw_box(painter, box, bg, fg, index)
             self._draw_text(painter, box, tag_font, value_font, fg,
@@ -110,10 +132,45 @@ class _Grid(QWidget):
         faded.setAlpha(160)
         painter.setPen(QPen(faded))
         painter.setFont(tag_font)
-        painter.drawText(box.adjusted(7, 0, -7, 0), Qt.AlignLeft | Qt.AlignVCenter, tag)
+        painter.drawText(box.adjusted(4, 0, -4, 0), Qt.AlignLeft | Qt.AlignVCenter, tag)
         painter.setPen(QPen(fg))
         painter.setFont(value_font)
-        painter.drawText(box.adjusted(7, 0, -7, 0), Qt.AlignRight | Qt.AlignVCenter, value)
+        painter.drawText(box.adjusted(4, 0, -4, 0), Qt.AlignRight | Qt.AlignVCenter, value)
+
+
+class SegmentHeader(QWidget):
+    """Pinned column header for segment grids."""
+
+    def __init__(self, scroll_area=None, parent=None):
+        super().__init__(parent)
+        self.scroll_area = scroll_area
+        self.setFixedHeight(int(_HEADER))
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        if scroll_area is not None:
+            scroll_area.viewport().installEventFilter(self)
+
+    def eventFilter(self, watched, event):
+        if self.scroll_area and watched == self.scroll_area.viewport():
+            if event.type() == QEvent.Resize:
+                self.update()
+        return super().eventFilter(watched, event)
+
+    def paintEvent(self, _event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing, True)
+
+        vw = self.scroll_area.viewport().width() if self.scroll_area else self.width()
+        box_w = (vw - _GAP * (SEGMENTS - 1)) / SEGMENTS
+
+        tag_font = QFont(MONO_QFONT)
+        tag_font.setStyleHint(QFont.Monospace)
+        tag_font.setFamilies(["JetBrains Mono", "DejaVu Sans Mono", "Consolas", "monospace"])
+        tag_font.setPixelSize(10)
+        painter.setFont(tag_font)
+        painter.setPen(QPen(QColor(Color.TEXT_3)))
+        for segment in range(SEGMENTS):
+            head = QRectF(segment * (box_w + _GAP), 0, box_w, _HEADER)
+            painter.drawText(head, Qt.AlignCenter, "SEG %d" % (segment + 1))
 
 
 class CellGrid(_Grid):
@@ -121,6 +178,29 @@ class CellGrid(_Grid):
 
     ROWS = CELLS_PER_SEGMENT
     TAG = "C%02d"
+    BASE_ROW_H = 50
+    HAS_HEADER = False
+
+    @staticmethod
+    def _draw_text(painter, box, tag_font, value_font, fg, tag, value):
+        faded = QColor(fg)
+        faded.setAlpha(160)
+        painter.setPen(QPen(faded))
+        tf = QFont(MONO_QFONT)
+        tf.setStyleHint(QFont.Monospace)
+        tf.setFamilies(["JetBrains Mono", "DejaVu Sans Mono", "Consolas", "monospace"])
+        tf.setPixelSize(max(9, int(round(10 * TM.font_scale))))
+        painter.setFont(tf)
+        painter.drawText(box.adjusted(6, 4, -6, 0), Qt.AlignLeft | Qt.AlignTop, tag)
+
+        painter.setPen(QPen(fg))
+        vf = QFont(MONO_QFONT)
+        vf.setStyleHint(QFont.Monospace)
+        vf.setFamilies(["JetBrains Mono", "DejaVu Sans Mono", "Consolas", "monospace"])
+        vf.setPixelSize(max(13, int(round(15 * TM.font_scale))))
+        vf.setBold(True)
+        painter.setFont(vf)
+        painter.drawText(box.adjusted(6, 0, -6, -6), Qt.AlignCenter | Qt.AlignBottom, value)
 
     def set_data(self, engine):
         values = tuple(round(cell.voltage, 3)

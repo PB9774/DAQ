@@ -7,13 +7,13 @@ bottom navigation bar uses Left/Right to choose pages and Enter to open them.
 from PyQt5.QtCore import QEvent, QObject, Qt
 from PyQt5.QtWidgets import (
     QApplication, QAbstractButton, QAbstractItemView, QComboBox,
-    QDoubleSpinBox, QLineEdit, QListWidget, QSlider, QSpinBox,
+    QDoubleSpinBox, QLineEdit, QListWidget, QScrollArea, QSlider, QSpinBox,
     QTableWidget, QTreeWidget, QWidget,
 )
 
 CONTROL_TYPES = (QAbstractButton, QComboBox, QSlider, QSpinBox,
                  QDoubleSpinBox, QTableWidget, QListWidget, QTreeWidget,
-                 QLineEdit)
+                 QLineEdit, QScrollArea)
 ARROWS = (Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down)
 ENTER_KEYS = (Qt.Key_Return, Qt.Key_Enter)
 
@@ -70,6 +70,16 @@ class FiveKeyNavigation(QObject):
         if key in ARROWS:
             if isinstance(focus, QTableWidget) and key in (Qt.Key_Up, Qt.Key_Down):
                 return False  # keep native row selection in the logs table
+            scroll_target = None
+            if isinstance(focus, QScrollArea):
+                scroll_target = focus
+            elif focus and isinstance(focus.parent(), QWidget) and isinstance(focus.parent().parent(), QScrollArea):
+                scroll_target = focus.parent().parent()
+            if scroll_target is not None and key in (Qt.Key_Up, Qt.Key_Down):
+                bar = scroll_target.verticalScrollBar()
+                step = bar.singleStep() or 20
+                bar.setValue(bar.value() + (-step if key == Qt.Key_Up else step))
+                return True
             if self.adjusting and isinstance(focus, QSlider):
                 step = max(1, focus.singleStep())
                 focus.setValue(focus.value() + (step if key in (Qt.Key_Up, Qt.Key_Right) else -step))

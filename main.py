@@ -40,10 +40,7 @@ from pages import (
 )
 from ui.chrome import NavBar, StatusStrip
 from ui.helpers import restyle_tree
-<<<<<<< HEAD
 from ui.keyboard_navigation import FiveKeyNavigation
-=======
->>>>>>> 798fc2cfd6b8f235e5fe05f2926b393737a6082b
 from ui.theme import DRIVER, ENGINEER, TM, stylesheet
 
 PAGE_BUILDERS = (OverviewPage, SegmentDetailsPage, TrendsPage, LogsPage, SetupPage)
@@ -84,18 +81,12 @@ class MainWindow(QMainWindow):
         self._pages = {}
         self._driver = None
         self._current_index = 0
-<<<<<<< HEAD
         self._keyboard_tab_index = 0
 
         backlight.set_max()
         self._build()
         self._keyboard_navigation = FiveKeyNavigation(self)
         QApplication.instance().installEventFilter(self._keyboard_navigation)
-=======
-
-        backlight.set_max()
-        self._build()
->>>>>>> 798fc2cfd6b8f235e5fe05f2926b393737a6082b
         self.apply_theme()
         self.set_mode(TM.mode)
 
@@ -144,7 +135,6 @@ class MainWindow(QMainWindow):
     def _toggle_fullscreen(self):
         self.showNormal() if self.isFullScreen() else self.showFullScreen()
 
-<<<<<<< HEAD
     def _active_modal(self):
         return QApplication.activeModalWidget()
 
@@ -171,8 +161,6 @@ class MainWindow(QMainWindow):
         self.show_page(self._current_index)
         self.nav._buttons[self._current_index].setFocus(Qt.OtherFocusReason)
 
-=======
->>>>>>> 798fc2cfd6b8f235e5fe05f2926b393737a6082b
     def set_mode(self, mode):
         if mode == DRIVER:
             if self._driver is None:
@@ -196,10 +184,7 @@ class MainWindow(QMainWindow):
             self._pages[index] = page
             self.stack.addWidget(page)
         self._current_index = index
-<<<<<<< HEAD
         self._keyboard_tab_index = index
-=======
->>>>>>> 798fc2cfd6b8f235e5fe05f2926b393737a6082b
         self.stack.setCurrentWidget(page)
         self.nav.select_silently(index)
         self.refresh_now()
@@ -218,7 +203,6 @@ class MainWindow(QMainWindow):
 
     # ── theme ──────────────────────────────────────────────────────────────
     def apply_theme(self):
-<<<<<<< HEAD
         self.setStyleSheet(stylesheet() + """
             QPushButton:focus, QComboBox:focus, QSlider:focus,
             QTableWidget:focus, QListWidget:focus, QTreeWidget:focus,
@@ -227,9 +211,6 @@ class MainWindow(QMainWindow):
                 outline: 2px solid #00D9FF;
             }
         """)
-=======
-        self.setStyleSheet(stylesheet())
->>>>>>> 798fc2cfd6b8f235e5fe05f2926b393737a6082b
         restyle_tree(self)
         self.apply_brightness(TM.brightness)
         self.strip.restyle()
