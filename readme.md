@@ -189,7 +189,6 @@ In rough priority order:
    pack data with no authentication. Low risk in a closed pit network,
    but worth a simple shared-token check before this is ever used on
    public event WiFi.
-<<<<<<< HEAD
 
 ## Five-key navigation (keyboard-only)
 
@@ -219,5 +218,3 @@ opens it. In Driver mode, **Right** switches to Engineering mode. Focus is shown
 with a cyan outline. Combo-box popups and log-table row selection retain native
 keyboard behavior. Sliders enter adjustment mode with Enter; use arrow keys to
 change the value and Enter again to finish.
-=======
->>>>>>> 798fc2cfd6b8f235e5fe05f2926b393737a6082b
