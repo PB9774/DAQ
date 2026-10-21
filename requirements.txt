@@ -1,0 +1,10 @@
+# For a DEV MACHINE (laptop/desktop), not the car's Raspberry Pi:
+#   pip install -r requirements.txt
+#
+# On the Raspberry Pi itself, use install.sh instead — it installs
+# PyQt5/numpy via apt (matches the RPi's system Qt build) and only uses
+# pip for pyqtgraph. Don't pip-install PyQt5 on the Pi; mixing an apt
+# PyQt5 with a pip PyQt5 can cause ABI conflicts.
+PyQt5>=5.15.0
+numpy>=1.21.0
+pyqtgraph>=0.13.0
