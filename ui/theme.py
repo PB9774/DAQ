@@ -217,6 +217,48 @@ QPushButton#tab {{ background:{p['SURFACE']}; color:{p['TEXT_2']};
     font-weight:800; letter-spacing:1px; }}
 QPushButton#tab:hover {{ border-color:{p['ACCENT']}; color:{p['ACCENT']}; }}
 QPushButton#tab:checked {{ background:{p['ACCENT']}; color:#FFFFFF; border-color:{p['ACCENT']}; }}
+QPushButton#driver_feed {{
+    background:{p['ACCENT'] if not TM.is_dark else '#1E3A8A'};
+    color:#FFFFFF;
+    border:2px solid {p['ACCENT'] if not TM.is_dark else '#3B82F6'};
+    border-radius:{r_sm + 2}px;
+    padding:6px 14px;
+    min-height:34px;
+    font-size:{sz('SMALL')}px;
+    font-weight:800;
+    letter-spacing:0.6px;
+}}
+QPushButton#driver_feed:hover {{
+    background:{'#1D4ED8' if not TM.is_dark else '#2563EB'};
+    border-color:{'#1E40AF' if not TM.is_dark else '#60A5FA'};
+}}
+QPushButton#driver_feed[active="true"] {{
+    background:{crit};
+    color:#FFFFFF;
+    border:2px solid {crit};
+}}
+QPushButton#driver_feed[active="true"]:hover {{
+    background:#D32F2F;
+    border-color:#B71C1C;
+}}
+
+QPushButton#driver_mode {{
+    background:{p['CARD'] if not TM.is_dark else '#1E293B'};
+    color:{p['TEXT'] if not TM.is_dark else '#F8FAFC'};
+    border:2px solid {p['LINE_HI'] if not TM.is_dark else '#64748B'};
+    border-radius:{r_sm + 2}px;
+    padding:6px 14px;
+    min-height:34px;
+    font-size:{sz('SMALL')}px;
+    font-weight:800;
+    letter-spacing:0.6px;
+}}
+QPushButton#driver_mode:hover {{
+    background:{p['SURFACE'] if not TM.is_dark else '#334155'};
+    border-color:{p['ACCENT'] if not TM.is_dark else '#94A3B8'};
+    color:{p['ACCENT'] if not TM.is_dark else '#FFFFFF'};
+}}
+
 QPushButton#mode {{ background:{p['ACCENT_SOFT']}; color:{p['ACCENT']};
     border:{bw}px solid {p['LINE_HI']}; border-radius:{r_pill}px;
     padding:5px 16px; min-height:34px; font-size:{sz('SMALL')}px; font-weight:800; letter-spacing:1px; }}

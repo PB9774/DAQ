@@ -207,8 +207,7 @@ class MainWindow(QMainWindow):
             QPushButton:focus, QComboBox:focus, QSlider:focus,
             QTableWidget:focus, QListWidget:focus, QTreeWidget:focus,
             QSpinBox:focus, QDoubleSpinBox:focus, QLineEdit:focus {
-                border: 3px solid #00D9FF;
-                outline: 2px solid #00D9FF;
+                border: 2px solid #00D9FF;
             }
         """)
         restyle_tree(self)

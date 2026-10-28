@@ -48,22 +48,22 @@ class DriverPage(QWidget):
     # ── construction ───────────────────────────────────────────────────────
     def _build_topbar(self):
         bar = QWidget()
-        set_scaled_height(bar, "SMALL", 2.3, 34)
+        set_scaled_height(bar, "LEAD", 2.4, 48)
         row = QHBoxLayout(bar)
-        row.setContentsMargins(2, 0, 2, 0)
-        row.setSpacing(10)
+        row.setContentsMargins(4, 2, 4, 2)
+        row.setSpacing(12)
 
         row.addWidget(LogoWidget(height=26, max_width=104))
-        row.addWidget(rule(vertical=True, length=20))
+        row.addWidget(rule(vertical=True, length=24))
         self._clock = label("--:--:--", size="SMALL", weight=700, mono=True)
         row.addWidget(self._clock)
-        row.addWidget(rule(vertical=True, length=20))
+        row.addWidget(rule(vertical=True, length=24))
         self._source = label("NO SIGNAL", role="caption")
         row.addWidget(self._source)
         row.addStretch()
 
         self._feed_button = QPushButton("START TELEMETRY")
-        self._feed_button.setObjectName("primary")
+        self._feed_button.setObjectName("driver_feed")
         self._feed_button.setCursor(Qt.PointingHandCursor)
         self._feed_button.setToolTip(
             "Stream telemetry on port %d (closed network only)." % TELEMETRY_PORT)
@@ -71,7 +71,7 @@ class DriverPage(QWidget):
         row.addWidget(self._feed_button)
 
         button = QPushButton("ENGINEER  ▶")
-        button.setObjectName("mode")
+        button.setObjectName("driver_mode")
         button.setCursor(Qt.PointingHandCursor)
         button.clicked.connect(self.engineer_requested.emit)
         row.addWidget(button)
@@ -90,6 +90,9 @@ class DriverPage(QWidget):
             return
         self._feed_active = active
         self._feed_button.setText("STOP TELEMETRY" if active else "START TELEMETRY")
+        self._feed_button.setProperty("active", "true" if active else "false")
+        self._feed_button.style().unpolish(self._feed_button)
+        self._feed_button.style().polish(self._feed_button)
 
     def _build_charge(self):
         frame, column = card(margins=(12, 10, 12, 10), spacing=4)
