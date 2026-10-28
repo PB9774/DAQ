@@ -15,7 +15,7 @@ from PyQt5.QtWidgets import (
     QTableWidget, QTreeWidget, QWidget,
 )
 
-from ui.cellgrid import SegmentHealthBar
+from ui.cellgrid import CellGrid, SegmentHealthBar, TempGrid
 from ui.faultpanel import FaultPanel
 from ui.theme import ENGINEER
 from ui.widgets import MetricTile
@@ -24,6 +24,7 @@ CONTROL_TYPES = (
     QAbstractButton, QComboBox, QSlider, QSpinBox,
     QDoubleSpinBox, QTableWidget, QListWidget, QTreeWidget,
     QLineEdit, QScrollArea, MetricTile, SegmentHealthBar, FaultPanel,
+    CellGrid, TempGrid,
 )
 ARROWS = (Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down)
 ENTER_KEYS = (Qt.Key_Return, Qt.Key_Enter, Qt.Key_Space)
@@ -172,7 +173,11 @@ class FiveKeyNavigation(QObject):
                 return (f"{prefix} › {title}: {val_text}", "Press OK: Open Cell Voltages & Temperatures Matrix")
             return (f"{prefix} › {title}: {val_text}", f"Press OK: View {title} in Trends Chart")
 
-        # 9. Health Bar & Faults & Special Cards
+        # 9. Health Bar, Grids, Faults & Special Cards
+        if isinstance(widget, CellGrid):
+            return ("SEGMENTS › CELL VOLTAGES MATRIX", "All 98 cell voltages across 7 segments")
+        if isinstance(widget, TempGrid):
+            return ("SEGMENTS › TEMPERATURE SENSORS", "All 49 temperature sensors across 7 segments")
         if isinstance(widget, SegmentHealthBar):
             return ("OVERVIEW › SEGMENTS HEALTH BAR", "Press OK: Open Cell Voltages & Temperatures Matrix")
         if isinstance(widget, FaultPanel):
@@ -371,9 +376,9 @@ class FiveKeyNavigation(QObject):
                 if hasattr(trends, "_select_channel"):
                     trends._select_channel(4)  # TEMP channel
             elif curr and focus is getattr(curr, "summary_card", None):
-                cell_scroll = getattr(curr, "cell_scroll", None)
-                if cell_scroll:
-                    cell_scroll.setFocus()
+                grid = getattr(curr, "grid", None)
+                if grid:
+                    grid.setFocus()
 
     # ── Event Filter ───────────────────────────────────────────────────────
     def eventFilter(self, watched, event):

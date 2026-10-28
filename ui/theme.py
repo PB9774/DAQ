@@ -183,6 +183,17 @@ QScrollBar::add-page, QScrollBar::sub-page {{ background:transparent; }}
 
 QFrame#card       {{ background:{p['CARD']}; border:{bw}px solid {p['LINE']}; border-radius:{r_md}px; }}
 QFrame#card_hi    {{ background:{p['CARD_HI']}; border:{bw}px solid {p['LINE_HI']}; border-radius:{r_md}px; }}
+QFrame#display_card,
+QFrame#source_card {{
+    background:{'#111C2A' if TM.is_dark else '#FFFFFF'};
+    border:2px solid {'#2E4766' if TM.is_dark else '#94A3B8'};
+    border-radius:{r_md}px;
+}}
+QFrame#scale_box {{
+    background:{'#09111C' if TM.is_dark else '#E2E8F0'};
+    border:2px solid {'#334D6E' if TM.is_dark else '#94A3B8'};
+    border-radius:8px;
+}}
 QFrame#card_focus {{ background:{p['CARD']}; border:{bw}px solid {p['ACCENT']}; border-radius:{r_md}px; }}
 QFrame#flat       {{ background:{p['SURFACE']}; border:none; border-radius:{r_md}px; }}
 QFrame#rule       {{ background:{p['LINE']}; border:none; }}
@@ -221,6 +232,27 @@ QPushButton#pill {{ background:{p['SURFACE']}; color:{p['TEXT_2']};
     padding:{pad_pill_v}px {pad_pill_h}px; min-height:30px; font-size:{sz('SMALL')}px; font-weight:600; }}
 QPushButton#pill:hover {{ border-color:{p['ACCENT']}; color:{p['ACCENT']}; }}
 QPushButton#pill:checked {{ background:{p['ACCENT']}; color:#FFFFFF; border-color:{p['ACCENT']}; }}
+QPushButton#scale_pill {{
+    background:{'#132030' if TM.is_dark else '#FFFFFF'};
+    color:{'#E2E8F0' if TM.is_dark else '#1E293B'};
+    border:1.5px solid {'#2E4766' if TM.is_dark else '#CBD5E1'};
+    border-radius:6px;
+    padding:5px 14px;
+    min-height:30px;
+    font-size:{sz('SMALL')}px;
+    font-weight:800;
+}}
+QPushButton#scale_pill:hover {{
+    border-color:{cyan};
+    color:{text_hi};
+    background:{'#1E344E' if TM.is_dark else '#F1F5F9'};
+}}
+QPushButton#scale_pill:checked {{
+    background:{'#0284C7' if not TM.is_dark else '#0284C7'};
+    border:2px solid {cyan};
+    color:#FFFFFF;
+    font-weight:900;
+}}
 QPushButton#tab {{ background:{p['SURFACE']}; color:{p['TEXT_2']};
     border:{bw}px solid {p['LINE']}; border-radius:{r_sm}px;
     padding:4px 6px; min-height:30px; font-size:{sz('CAPTION')}px;
@@ -415,6 +447,22 @@ QPushButton#pill:checked:focus {{
     border: 3px solid {cyan};
     border-radius: {r_pill}px;
     background-color: {p['ACCENT']};
+    color: #FFFFFF;
+    font-weight: 900;
+}}
+
+QPushButton#scale_pill:focus {{
+    border: 3px solid {cyan};
+    border-radius: 6px;
+    background-color: {rgba_cyan_med};
+    color: {text_hi};
+    font-weight: 900;
+}}
+
+QPushButton#scale_pill:checked:focus {{
+    border: 3px solid {cyan};
+    border-radius: 6px;
+    background-color: {'#0284C7' if not TM.is_dark else '#0891B2'};
     color: #FFFFFF;
     font-weight: 900;
 }}
