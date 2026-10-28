@@ -190,31 +190,23 @@ In rough priority order:
    but worth a simple shared-token check before this is ever used on
    public event WiFi.
 
-## Five-key navigation (keyboard-only)
+## Five-key hardware navigation (UP, DOWN, LEFT, RIGHT, OK)
 
-The dashboard supports navigation using only Left, Right, Up, Down, and Enter:
+The entire dashboard can be operated with five physical buttons (UP, DOWN, LEFT, RIGHT, and OK / Enter):
 
-- **Left / Right:** select the previous/next Engineering tab. The cyan focus outline shows the selected tab; press **Enter** to open it.
-- **Up / Down:** cycle through visible controls in visual reading order. This also makes buttons in horizontal rows reachable without extra keys.
-- **Enter:** activate buttons, open selectors, or enter/leave slider adjustment mode. While adjusting a slider, Up/Down change its value and Enter finishes adjustment.
-- **Tables:** Up/Down retain native row selection; Enter opens the selected log row when a row is selected.
-- **Driver Mode:** Up/Down navigate the visible controls; Enter activates them. Right Arrow switches to Engineering Mode. In Engineering Mode, use Setup → Go to Driver View to return.
-- **Dialogs:** the same five keys navigate and activate available dialog buttons.
-
-The keyboard controller is in `ui/keyboard_navigation.py`. The cell and temperature grids are currently read-only visualizations in the original application; this change does not invent new per-cell actions where none existed.
-
-### Five-key keyboard navigation
-
-The dashboard can be operated with Left, Right, Up, Down and Enter. In Engineering Mode, focus a bottom navigation tab and use Left/Right to select another page, then Enter to open it. Inside an open page, all four arrow keys move through its visible interactive controls in visual order; Enter activates buttons, opens combo boxes, or enters slider adjustment mode (Up/Down adjust the value, Enter finishes). Tables keep native Up/Down row navigation and Enter opens a selected log record where supported. In Driver Mode, Up/Down navigate controls, Enter activates them, and Right switches to Engineering Mode.
-
-## Five-key navigation (updated)
-
-Keyboard navigation is global across the active page. Use **Up/Down** to move
-through all visible controls in visual reading order, including top control rows
-(such as Trends channel and time-window buttons), and **Enter** to activate the
-focused control. **Left/Right** also move through page controls; when focus is on
-the bottom page-navigation bar, they select the previous/next page and **Enter**
-opens it. In Driver mode, **Right** switches to Engineering mode. Focus is shown
-with a cyan outline. Combo-box popups and log-table row selection retain native
-keyboard behavior. Sliders enter adjustment mode with Enter; use arrow keys to
-change the value and Enter again to finish.
+- **2D Spatial Navigation:** Arrow keys move focus spatially across the screen to the nearest control in that direction. Left/Right moves within rows; Up/Down moves between control tiers and columns.
+- **Bottom Navigation Bar:**
+  - **Left / Right:** smoothly cycle through `◀ DRIVER` and the five tabs (`OVERVIEW`, `SEGMENTS`, `TRENDS`, `LOGS`, `SETUP`).
+  - **OK (Enter):** opens the selected tab (or returns to Driver mode from `◀ DRIVER`) and focuses the page controls.
+  - **Up:** immediately activates the tab and moves focus up into the page controls directly above that tab.
+- **Scroll Areas & Tables:**
+  - In the cell voltage grid, **Up / Down** scrolls the view; reaching the bottom passes focus down to the navbar without getting stuck.
+  - In log tables, **Up / Down** navigates rows; pressing Up on row 0 or Down on the last row smoothly exits to adjacent controls.
+  - **OK:** on the file browser table opens the selected log file in the viewer.
+- **Sliders & Dropdowns:**
+  - Highlighting a slider and pressing **OK** enters adjustment mode (Left/Down decreases, Right/Up increases). Pressing **OK** again commits the value.
+  - Highlighting a dropdown and pressing **OK** opens its selection popup.
+- **Driver Mode:**
+  - **Left / Right:** moves between `START TELEMETRY` and `ENGINEER ▶`.
+  - **OK:** activates the focused button (toggles telemetry streaming or enters Engineer mode).
+  - Pressing **Right** while focused on `ENGINEER ▶` also enters Engineer mode.

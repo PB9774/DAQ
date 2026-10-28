@@ -142,6 +142,7 @@ class NavBar(QWidget):
         driver.setObjectName("mode")
         driver.setCursor(Qt.PointingHandCursor)
         driver.clicked.connect(self.driver_requested.emit)
+        self.driver_button = driver
         row.addWidget(driver)
         row.addSpacing(6)
 
@@ -163,3 +164,8 @@ class NavBar(QWidget):
         """Sync the tab highlight without re-emitting page_changed."""
         for position, button in enumerate(self._buttons):
             button.setChecked(position == index)
+
+    @property
+    def all_buttons(self):
+        driver_btn = getattr(self, "driver_button", None)
+        return ([driver_btn] if driver_btn else []) + self._buttons
