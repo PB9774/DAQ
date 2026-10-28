@@ -215,7 +215,10 @@ class FiveKeyNavigation(QObject):
                 return True
 
             if key in ENTER_KEYS:
-                self._activate(focus, driver)
+                if focus is None and controls:
+                    controls[0].setFocus(Qt.TabFocusReason)
+                else:
+                    self._activate(focus, driver)
                 return True
 
         # ── Engineer Mode ──────────────────────────────────────────────────
@@ -342,6 +345,12 @@ class FiveKeyNavigation(QObject):
             return True
 
         if key in ENTER_KEYS:
+            if focus is None:
+                if page_controls:
+                    page_controls[0].setFocus(Qt.TabFocusReason)
+                elif nav_buttons:
+                    nav_buttons[0].setFocus(Qt.TabFocusReason)
+                return True
             if isinstance(focus, QSlider):
                 self.adjusting = not self.adjusting
                 focus.setToolTip(

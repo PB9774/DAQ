@@ -146,20 +146,18 @@ class MainWindow(QMainWindow):
         self.nav._buttons[self._keyboard_tab_index].setFocus(Qt.OtherFocusReason)
 
     def keyboard_activate_tab(self):
-        self.set_mode(ENGINEER)
-        self.show_page(self._keyboard_tab_index)
-        page = self.stack.currentWidget()
-        # Focus the first usable control so Up/Down can continue immediately.
-        if page is not None:
-            controls = self._keyboard_navigation._controls(page)
-            if controls:
-                controls[0].setFocus(Qt.TabFocusReason)
+        target_tab = self._keyboard_tab_index
+        if self._shells.currentIndex() != 1:
+            self._shells.setCurrentIndex(1)
+            if TM.mode != ENGINEER:
+                TM.mode = ENGINEER
+                TM.save()
+        self.show_page(target_tab)
 
     def set_mode_from_keyboard_engineering(self):
         """Driver-mode Right Arrow enters Engineering Mode at the current tab."""
         self.set_mode(ENGINEER)
         self.show_page(self._current_index)
-        self.nav._buttons[self._current_index].setFocus(Qt.OtherFocusReason)
 
     def set_mode(self, mode):
         if mode == DRIVER:
@@ -168,6 +166,10 @@ class MainWindow(QMainWindow):
                 self._driver.engineer_requested.connect(lambda: self.set_mode(ENGINEER))
                 self._driver_host.layout().addWidget(self._driver)
             self._shells.setCurrentIndex(0)
+            if hasattr(self, "_keyboard_navigation"):
+                controls = self._keyboard_navigation._controls(self._driver)
+                if controls:
+                    controls[0].setFocus(Qt.TabFocusReason)
         else:
             self.show_page(self._current_index)
             self._shells.setCurrentIndex(1)
@@ -188,6 +190,12 @@ class MainWindow(QMainWindow):
         self.stack.setCurrentWidget(page)
         self.nav.select_silently(index)
         self.refresh_now()
+        if hasattr(self, "_keyboard_navigation"):
+            controls = self._keyboard_navigation._controls(page)
+            if controls:
+                controls[0].setFocus(Qt.TabFocusReason)
+            elif hasattr(self, "nav") and self.nav and hasattr(self.nav, "_buttons") and len(self.nav._buttons) > index:
+                self.nav._buttons[index].setFocus(Qt.TabFocusReason)
 
     def _build_page(self, index):
         builder = PAGE_BUILDERS[index]
