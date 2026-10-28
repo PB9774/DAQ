@@ -124,6 +124,53 @@ class StatusStrip(QFrame):
         self._pill.restyle()
 
 
+class SelectorHUD(QFrame):
+    """Clean, high-contrast HUD strip displaying the current dashboard location
+    and what action will occur if OK (Spacebar/Enter) is pressed.
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setObjectName("selector_hud")
+        set_scaled_height(self, "CAPTION", 2.2, 30)
+
+        row = QHBoxLayout(self)
+        row.setContentsMargins(12, 2, 12, 2)
+        row.setSpacing(8)
+
+        lbl_loc = label("⯈ LOCATION:", role="title")
+        lbl_loc.setObjectName("hud_title")
+        row.addWidget(lbl_loc)
+
+        self._loc = label("OVERVIEW", role="lead")
+        self._loc.setObjectName("hud_loc")
+        row.addWidget(self._loc)
+
+        row.addSpacing(4)
+        div = label("│", role="caption")
+        div.setObjectName("hud_div")
+        row.addWidget(div)
+        row.addSpacing(4)
+
+        lbl_action = label("PRESS OK:", role="title")
+        lbl_action.setObjectName("hud_action_title")
+        row.addWidget(lbl_action)
+
+        self._action = label("Navigate with arrow keys", role="lead")
+        self._action.setObjectName("hud_action")
+        row.addWidget(self._action)
+
+        row.addStretch()
+
+        self._hint = label("5-KEY NAV: [↑] [↓] [←] [→]  [OK / Space]", role="caption", mono=True)
+        self._hint.setObjectName("hud_hint")
+        row.addWidget(self._hint)
+
+    def update_info(self, location, action):
+        set_text(self._loc, location)
+        set_text(self._action, action)
+
+
 class NavBar(QWidget):
     page_changed = pyqtSignal(int)
     driver_requested = pyqtSignal()

@@ -38,7 +38,7 @@ from core.recorder import Recorder
 from pages import (
     DriverPage, LogsPage, OverviewPage, SegmentDetailsPage, SetupPage, TrendsPage,
 )
-from ui.chrome import NavBar, StatusStrip
+from ui.chrome import NavBar, SelectorHUD, StatusStrip
 from ui.helpers import restyle_tree
 from ui.keyboard_navigation import FiveKeyNavigation
 from ui.theme import DRIVER, ENGINEER, TM, stylesheet
@@ -115,6 +115,9 @@ class MainWindow(QMainWindow):
         self.stack = QStackedWidget()
         column.addWidget(self.stack, 1)
 
+        self.selector_hud = SelectorHUD()
+        column.addWidget(self.selector_hud)
+
         self.nav = NavBar()
         self.nav.page_changed.connect(self.show_page)
         self.nav.driver_requested.connect(lambda: self.set_mode(DRIVER))
@@ -159,6 +162,14 @@ class MainWindow(QMainWindow):
         self.set_mode(ENGINEER)
         self.show_page(self._current_index)
 
+    def update_selector_hud(self, focus_widget):
+        if not hasattr(self, "selector_hud") or not hasattr(self, "_keyboard_navigation"):
+            return
+        loc, action = self._keyboard_navigation.describe_widget(focus_widget)
+        self.selector_hud.update_info(loc, action)
+        if hasattr(self, "_driver") and self._driver and hasattr(self._driver, "selector_hud"):
+            self._driver.selector_hud.update_info(loc, action)
+
     def set_mode(self, mode):
         if mode == DRIVER:
             if self._driver is None:
@@ -176,6 +187,7 @@ class MainWindow(QMainWindow):
         if TM.mode != mode:
             TM.mode = mode
             TM.save()
+        self.update_selector_hud(self.focusWidget())
         self.refresh_now()
 
     # ── pages ──────────────────────────────────────────────────────────────
@@ -196,6 +208,7 @@ class MainWindow(QMainWindow):
                 controls[0].setFocus(Qt.TabFocusReason)
             elif hasattr(self, "nav") and self.nav and hasattr(self.nav, "_buttons") and len(self.nav._buttons) > index:
                 self.nav._buttons[index].setFocus(Qt.TabFocusReason)
+        self.update_selector_hud(self.focusWidget())
 
     def _build_page(self, index):
         builder = PAGE_BUILDERS[index]
@@ -211,13 +224,7 @@ class MainWindow(QMainWindow):
 
     # ── theme ──────────────────────────────────────────────────────────────
     def apply_theme(self):
-        self.setStyleSheet(stylesheet() + """
-            QPushButton:focus, QComboBox:focus, QSlider:focus,
-            QTableWidget:focus, QListWidget:focus, QTreeWidget:focus,
-            QSpinBox:focus, QDoubleSpinBox:focus, QLineEdit:focus {
-                border: 2px solid #00D9FF;
-            }
-        """)
+        self.setStyleSheet(stylesheet())
         restyle_tree(self)
         self.apply_brightness(TM.brightness)
         self.strip.restyle()

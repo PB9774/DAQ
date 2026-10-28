@@ -18,6 +18,7 @@ from ui.helpers import (
     card, label, numeral, rule, set_scaled_height, set_scaled_width, set_text,
     soc_status, style_numeral, temp_status,
 )
+from ui.chrome import SelectorHUD
 from ui.theme import Color
 from ui.widgets import LogoWidget, MetricTile, StatusBanner
 
@@ -41,6 +42,9 @@ class DriverPage(QWidget):
         body.addWidget(self._build_speed(), 1)
         body.addWidget(self._build_numbers(), 0)
         outer.addLayout(body, 1)
+
+        self.selector_hud = SelectorHUD()
+        outer.addWidget(self.selector_hud)
 
         self.banner = StatusBanner()
         outer.addWidget(self.banner)

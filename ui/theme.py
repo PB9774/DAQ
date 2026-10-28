@@ -296,4 +296,117 @@ QMessageBox {{ background:{p['CARD']}; }}
 QMessageBox QLabel {{ font-size:{sz('BODY')}px; }}
 QMessageBox QPushButton {{ background:{p['SURFACE']}; color:{p['TEXT']};
     border:1px solid {p['LINE_HI']}; border-radius:{r_sm}px; padding:6px 18px; min-width:80px; }}
+
+QFrame#selector_hud {{
+    background:{'#0F172A' if not TM.is_dark else '#07101E'};
+    border:1.5px solid {'#0284C7' if not TM.is_dark else '#00E5FF'};
+    border-radius:6px;
+}}
+QFrame#selector_hud QLabel#hud_title {{
+    color:{'#0284C7' if not TM.is_dark else '#00E5FF'};
+    font-weight:900;
+    font-size:{sz('CAPTION')}px;
+    letter-spacing:0.8px;
+}}
+QFrame#selector_hud QLabel#hud_loc {{
+    color:{p['TEXT'] if not TM.is_dark else '#FFFFFF'};
+    font-weight:800;
+    font-size:{sz('BODY')}px;
+    letter-spacing:0.4px;
+}}
+QFrame#selector_hud QLabel#hud_div {{
+    color:{p['LINE_HI'] if not TM.is_dark else '#334155'};
+    font-weight:400;
+}}
+QFrame#selector_hud QLabel#hud_action_title {{
+    color:{'#16A34A' if not TM.is_dark else '#38BDF8'};
+    font-weight:900;
+    font-size:{sz('CAPTION')}px;
+    letter-spacing:0.8px;
+}}
+QFrame#selector_hud QLabel#hud_action {{
+    color:{'#15803D' if not TM.is_dark else '#34D399'};
+    font-weight:800;
+    font-size:{sz('BODY')}px;
+}}
+QFrame#selector_hud QLabel#hud_hint {{
+    color:{p['TEXT_3'] if not TM.is_dark else '#64748B'};
+    font-size:{sz('SMALL')}px;
+    font-weight:700;
+}}
+
+/* =========================================================================
+   UNIVERSAL HIGH-VISIBILITY SELECTOR BOX (5-KEY HARDWARE NAVIGATION)
+   ========================================================================= */
+QPushButton:focus,
+QComboBox:focus,
+QTableWidget:focus,
+QListWidget:focus,
+QTreeWidget:focus,
+QSpinBox:focus,
+QDoubleSpinBox:focus,
+QLineEdit:focus,
+QScrollArea:focus {{
+    border: 3px solid {'#0284C7' if not TM.is_dark else '#00E5FF'};
+    background-color: {'rgba(2, 132, 199, 0.18)' if not TM.is_dark else 'rgba(0, 229, 255, 0.25)'};
+    color: {p['TEXT'] if not TM.is_dark else '#FFFFFF'};
+}}
+
+QPushButton#pill:focus {{
+    border: 3px solid {'#0284C7' if not TM.is_dark else '#00E5FF'};
+    border-radius: {r_pill}px;
+    background-color: {'rgba(2, 132, 199, 0.25)' if not TM.is_dark else 'rgba(0, 229, 255, 0.35)'};
+    color: {p['TEXT'] if not TM.is_dark else '#FFFFFF'};
+    font-weight: 800;
+}}
+
+QPushButton#pill:checked:focus {{
+    border: 3px solid {'#0369A1' if not TM.is_dark else '#00E5FF'};
+    border-radius: {r_pill}px;
+    background-color: {'#0284C7' if not TM.is_dark else '#0891B2'};
+    color: #FFFFFF;
+    font-weight: 800;
+}}
+
+QPushButton#nav:focus {{
+    border: 3px solid {'#0284C7' if not TM.is_dark else '#00E5FF'};
+    border-radius: 6px;
+    background-color: {'rgba(2, 132, 199, 0.22)' if not TM.is_dark else 'rgba(0, 229, 255, 0.30)'};
+    color: {'#0284C7' if not TM.is_dark else '#00E5FF'};
+    font-weight: 900;
+}}
+
+QPushButton#nav:checked:focus {{
+    border: 3px solid {'#0284C7' if not TM.is_dark else '#00E5FF'};
+    border-radius: 6px;
+    background-color: {'rgba(2, 132, 199, 0.35)' if not TM.is_dark else 'rgba(0, 229, 255, 0.40)'};
+    color: {'#0284C7' if not TM.is_dark else '#00E5FF'};
+    font-weight: 900;
+}}
+
+QPushButton#mode:focus,
+QPushButton#driver_mode:focus {{
+    border: 3px solid {'#0284C7' if not TM.is_dark else '#00E5FF'};
+    border-radius: {r_sm + 2}px;
+    background-color: {'rgba(2, 132, 199, 0.25)' if not TM.is_dark else 'rgba(0, 229, 255, 0.35)'};
+    color: {p['TEXT'] if not TM.is_dark else '#FFFFFF'};
+    font-weight: 900;
+}}
+
+QPushButton#driver_feed:focus {{
+    border: 3px solid {'#0284C7' if not TM.is_dark else '#00E5FF'};
+    border-radius: {r_sm + 2}px;
+    background-color: {'rgba(2, 132, 199, 0.35)' if not TM.is_dark else 'rgba(0, 229, 255, 0.35)'};
+    color: #FFFFFF;
+    font-weight: 900;
+}}
+
+QSlider:focus::handle:horizontal {{
+    border: 3px solid {'#0284C7' if not TM.is_dark else '#00E5FF'};
+    background: {'#0284C7' if not TM.is_dark else '#00E5FF'};
+    width: 26px;
+    height: 26px;
+    margin: -11px 0;
+    border-radius: 13px;
+}}
 """

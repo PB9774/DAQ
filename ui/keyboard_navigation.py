@@ -29,6 +29,105 @@ class FiveKeyNavigation(QObject):
         super().__init__(window)
         self.window = window
         self.adjusting = False
+        app = QApplication.instance()
+        if app is not None:
+            app.focusChanged.connect(self._on_focus_changed)
+
+    def _on_focus_changed(self, old, new):
+        if hasattr(self.window, "update_selector_hud"):
+            self.window.update_selector_hud(new)
+
+    def describe_widget(self, widget):
+        if widget is None:
+            page = getattr(self.window, "stack", None)
+            curr = page.currentWidget() if page else None
+            pname = type(curr).__name__.replace("Page", "").upper() if curr else "OVERVIEW"
+            return (pname, "Use Arrow Keys to navigate")
+
+        name = widget.objectName()
+        text = getattr(widget, "text", lambda: "")().strip()
+
+        # 1. Driver HUD buttons
+        if name == "driver_feed":
+            active = widget.property("active") == "true" or "STOP" in text.upper()
+            return ("DRIVER HUD › TELEMETRY", "Press OK: Stop Telemetry Transmission" if active else "Press OK: Start Telemetry Stream")
+        if name == "driver_mode":
+            return ("DRIVER HUD › CONSOLE", "Press OK: Switch to Engineering Console")
+        if name == "mode" or text.startswith("◀"):
+            return ("NAVBAR › DRIVER HUD", "Press OK: Return to Driver Screen")
+
+        # 2. Navbar tab buttons
+        nav = getattr(self.window, "nav", None)
+        if nav and widget in getattr(nav, "_buttons", []):
+            tab_names = {
+                "OVERVIEW": "Open Pack Overview & Key Metrics",
+                "SEGMENTS": "Open Cell Voltages & Temperatures Matrix",
+                "TRENDS": "Open Real-time Telemetry Trends",
+                "LOGS": "Open Data Recording & Session Logs",
+                "SETUP": "Open System Settings & Calibration",
+            }
+            action = tab_names.get(text, f"Open {text} Page")
+            return (f"NAVBAR › {text} TAB", f"Press OK: {action}")
+
+        # 3. Trends Page Channels & Time Windows
+        if name == "pill":
+            channel_names = {
+                "PACK": "Plot Pack Voltage (V)",
+                "CURRENT": "Plot Current Draw / Charge (A)",
+                "POWER": "Plot Pack Power (kW)",
+                "SOC": "Plot State of Charge (%)",
+                "TEMP": "Plot Hottest Cell Temp (°C)",
+                "ΔV": "Plot Cell Voltage Spread (V)",
+                "1m": "Set Chart Window to 1 Minute",
+                "5m": "Set Chart Window to 5 Minutes",
+                "10m": "Set Chart Window to 10 Minutes",
+                "30m": "Set Chart Window to 30 Minutes",
+            }
+            action = channel_names.get(text, f"Select {text}")
+            group = "TIME WINDOW" if text.endswith("m") else "CHANNEL"
+            return (f"TRENDS › {group}: {text}", f"Press OK: {action}")
+
+        # 4. Sliders (e.g. Setup page)
+        if isinstance(widget, QSlider):
+            from PyQt5.QtWidgets import QLabel
+            parent = widget.parentWidget()
+            lbl = "SLIDER"
+            if parent:
+                for child in parent.findChildren(QLabel):
+                    txt = child.text().strip()
+                    if txt and not txt.endswith("%") and not txt.endswith("x") and not txt.startswith("1024"):
+                        lbl = txt
+                        break
+            if self.adjusting:
+                return (f"SETUP › ADJUSTING {lbl.upper()}", "Use Left/Right to change value  |  Press OK: Lock In")
+            return (f"SETUP › {lbl.upper()}", "Press OK to adjust with Arrow Keys")
+
+        # 5. Buttons in Setup / Logs
+        if isinstance(widget, QAbstractButton):
+            if "THEME" in text.upper() or "DARK" in text.upper() or "LIGHT" in text.upper():
+                return ("SETUP › THEME", "Press OK: Toggle Dark / Light Theme")
+            if "RESTART" in text.upper():
+                return ("SETUP › SYSTEM", "Press OK: Restart BMS Dashboard")
+            if "LOG" in text.upper() or "REC" in text.upper():
+                return ("LOGS › RECORDER", f"Press OK: {text}")
+            if "EXPORT" in text.upper():
+                return ("LOGS › EXPORT", f"Press OK: {text}")
+            if "CLEAR" in text.upper():
+                return ("LOGS › MAINTENANCE", f"Press OK: {text}")
+            if text:
+                return (f"SELECTOR › {text}", f"Press OK: Activate {text}")
+
+        # 6. ScrollArea / CellGrid
+        if isinstance(widget, QScrollArea):
+            return ("SEGMENTS › CELL MATRIX", "Use Up/Down/Left/Right to inspect Cell Matrix")
+
+        # 7. Tables (Logs browser & viewer)
+        if isinstance(widget, QTableWidget):
+            row = widget.currentRow()
+            row_info = f"Row {row + 1}" if row >= 0 else "Select Log"
+            return (f"LOGS › SESSION TABLE ({row_info})", "Use Up/Down to navigate  |  Press OK: Inspect Details")
+
+        return (f"CURRENT: {text or type(widget).__name__}", "Press OK to select")
 
     # ── Helpers ────────────────────────────────────────────────────────────
     def _dir_name(self, key):
@@ -232,6 +331,7 @@ class FiveKeyNavigation(QObject):
             if key in ENTER_KEYS:
                 self.adjusting = False
                 focus.setToolTip("Press OK to adjust")
+                self._on_focus_changed(None, focus)
                 return True
             if key in ARROWS:
                 step = max(1, focus.singleStep())
@@ -357,6 +457,8 @@ class FiveKeyNavigation(QObject):
                     "Adjustment mode: arrows change value; OK finishes"
                     if self.adjusting else "Press OK to adjust"
                 )
+                self._on_focus_changed(None, focus)
+                return True
             else:
                 self._activate(focus, page)
             return True
