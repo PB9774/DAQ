@@ -32,8 +32,8 @@ class DriverPage(QWidget):
         self._feed_active = None
 
         outer = QVBoxLayout(self)
-        outer.setContentsMargins(10, 8, 10, 8)
-        outer.setSpacing(8)
+        outer.setContentsMargins(10, 4, 10, 4)
+        outer.setSpacing(4)
         outer.addWidget(self._build_topbar())
 
         body = QHBoxLayout()
@@ -162,6 +162,7 @@ class DriverPage(QWidget):
         self._power = MetricTile("POWER", "kW", size="TITLE", accent=Color.POWER)
         self._temp = MetricTile("MAX TEMP", "°C", size="TITLE", detail=True)
         for tile in (self._pack_v, self._current, self._power, self._temp):
+            tile.setFocusPolicy(Qt.StrongFocus)
             column.addWidget(tile, 1)
         return holder
 

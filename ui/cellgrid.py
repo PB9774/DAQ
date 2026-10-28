@@ -308,3 +308,17 @@ class SegmentHealthBar(QWidget):
             painter.setPen(QPen(QColor(Color.TEXT_2)))
             painter.drawText(box.adjusted(8, 0, -8, -4), Qt.AlignRight | Qt.AlignBottom,
                              "Δ %.0f mV" % (delta_v * 1000))
+
+        if self.hasFocus():
+            cyan = QColor("#00E5FF" if TM.is_dark else "#0284C7")
+            painter.setPen(QPen(cyan, 3.0))
+            painter.setBrush(Qt.NoBrush)
+            painter.drawRoundedRect(QRectF(self.rect()).adjusted(1, 1, -1, -1), 8, 8)
+
+    def focusInEvent(self, event):
+        super().focusInEvent(event)
+        self.update()
+
+    def focusOutEvent(self, event):
+        super().focusOutEvent(event)
+        self.update()

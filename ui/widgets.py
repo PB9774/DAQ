@@ -143,11 +143,11 @@ class StatusBanner(QFrame):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("card")
-        set_scaled_height(self, "TITLE", 3.2, 80)
+        set_scaled_height(self, "TITLE", 2.6, 52)
         self._status = None
 
         row = QHBoxLayout(self)
-        row.setContentsMargins(18, 8, 18, 8)
+        row.setContentsMargins(18, 4, 18, 4)
         row.setSpacing(16)
 
         self._word = label("READY", align=Qt.AlignCenter, size="TITLE", weight=900, spacing=3)

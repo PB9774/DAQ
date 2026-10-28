@@ -106,8 +106,8 @@ class MainWindow(QMainWindow):
 
         console = QWidget()
         column = QVBoxLayout(console)
-        column.setContentsMargins(10, 8, 10, 0)
-        column.setSpacing(8)
+        column.setContentsMargins(10, 4, 10, 0)
+        column.setSpacing(5)
 
         self.strip = StatusStrip()
         column.addWidget(self.strip)

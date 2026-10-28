@@ -142,7 +142,7 @@ class SelectorHUD(QFrame):
         lbl_loc.setObjectName("hud_title")
         row.addWidget(lbl_loc)
 
-        self._loc = label("OVERVIEW", role="lead")
+        self._loc = label("OVERVIEW", size="SMALL", weight=800)
         self._loc.setObjectName("hud_loc")
         row.addWidget(self._loc)
 
@@ -156,7 +156,7 @@ class SelectorHUD(QFrame):
         lbl_action.setObjectName("hud_action_title")
         row.addWidget(lbl_action)
 
-        self._action = label("Navigate with arrow keys", role="lead")
+        self._action = label("Navigate with arrow keys", size="SMALL", weight=700)
         self._action.setObjectName("hud_action")
         row.addWidget(self._action)
 

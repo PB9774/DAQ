@@ -11,14 +11,19 @@ console seamless and intuitive.
 from PyQt5.QtCore import QEvent, QObject, Qt
 from PyQt5.QtWidgets import (
     QApplication, QAbstractButton, QComboBox, QDoubleSpinBox,
-    QLineEdit, QListWidget, QScrollArea, QSlider, QSpinBox,
+    QLabel, QLineEdit, QListWidget, QScrollArea, QSlider, QSpinBox,
     QTableWidget, QTreeWidget, QWidget,
 )
+
+from ui.cellgrid import SegmentHealthBar
+from ui.faultpanel import FaultPanel
+from ui.theme import ENGINEER
+from ui.widgets import MetricTile
 
 CONTROL_TYPES = (
     QAbstractButton, QComboBox, QSlider, QSpinBox,
     QDoubleSpinBox, QTableWidget, QListWidget, QTreeWidget,
-    QLineEdit, QScrollArea,
+    QLineEdit, QScrollArea, MetricTile, SegmentHealthBar, FaultPanel,
 )
 ARROWS = (Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down)
 ENTER_KEYS = (Qt.Key_Return, Qt.Key_Enter, Qt.Key_Space)
@@ -70,26 +75,25 @@ class FiveKeyNavigation(QObject):
             return (f"NAVBAR › {text} TAB", f"Press OK: {action}")
 
         # 3. Trends Page Channels & Time Windows
-        if name == "pill":
-            channel_names = {
-                "PACK": "Plot Pack Voltage (V)",
-                "CURRENT": "Plot Current Draw / Charge (A)",
-                "POWER": "Plot Pack Power (kW)",
-                "SOC": "Plot State of Charge (%)",
-                "TEMP": "Plot Hottest Cell Temp (°C)",
-                "ΔV": "Plot Cell Voltage Spread (V)",
-                "1m": "Set Chart Window to 1 Minute",
-                "5m": "Set Chart Window to 5 Minutes",
-                "10m": "Set Chart Window to 10 Minutes",
-                "30m": "Set Chart Window to 30 Minutes",
-            }
-            action = channel_names.get(text, f"Select {text}")
+        channel_names = {
+            "PACK": "Plot Pack Voltage (V)",
+            "CURRENT": "Plot Current Draw / Charge (A)",
+            "POWER": "Plot Pack Power (kW)",
+            "SOC": "Plot State of Charge (%)",
+            "TEMP": "Plot Hottest Cell Temp (°C)",
+            "ΔV": "Plot Cell Voltage Spread (V)",
+            "1m": "Set Chart Window to 1 Minute",
+            "5m": "Set Chart Window to 5 Minutes",
+            "10m": "Set Chart Window to 10 Minutes",
+            "30m": "Set Chart Window to 30 Minutes",
+        }
+        if name == "pill" and text in channel_names:
+            action = channel_names[text]
             group = "TIME WINDOW" if text.endswith("m") else "CHANNEL"
             return (f"TRENDS › {group}: {text}", f"Press OK: {action}")
 
         # 4. Sliders (e.g. Setup page)
         if isinstance(widget, QSlider):
-            from PyQt5.QtWidgets import QLabel
             parent = widget.parentWidget()
             lbl = "SLIDER"
             if parent:
@@ -102,20 +106,47 @@ class FiveKeyNavigation(QObject):
                 return (f"SETUP › ADJUSTING {lbl.upper()}", "Use Left/Right to change value  |  Press OK: Lock In")
             return (f"SETUP › {lbl.upper()}", "Press OK to adjust with Arrow Keys")
 
-        # 5. Buttons in Setup / Logs
+        # 5. Buttons in Setup / Logs / Driver
         if isinstance(widget, QAbstractButton):
-            if "THEME" in text.upper() or "DARK" in text.upper() or "LIGHT" in text.upper():
-                return ("SETUP › THEME", "Press OK: Toggle Dark / Light Theme")
-            if "RESTART" in text.upper():
+            u_text = text.upper()
+            if "DARK" in u_text or "LIGHT" in u_text or "SWITCH" in u_text:
+                return ("SETUP › DISPLAY THEME", "Press OK: Toggle Dark / Light Theme")
+            if text in ("SM", "MD", "LG", "XL"):
+                scale_labels = {"SM": "0.9x Small", "MD": "1.0x Normal", "LG": "1.15x Large", "XL": "1.3x Extra Large"}
+                return (f"SETUP › TEXT SCALE ({text})", f"Press OK: Set Font Size to {scale_labels.get(text, text)}")
+            if text in ("DRIVER", "ENGINEER"):
+                return (f"SETUP › STARTUP MODE ({text})", f"Press OK: Set Default Startup Mode to {text}")
+            if "RESTART" in u_text:
                 return ("SETUP › SYSTEM", "Press OK: Restart BMS Dashboard")
-            if "LOG" in text.upper() or "REC" in text.upper():
-                return ("LOGS › RECORDER", f"Press OK: {text}")
-            if "EXPORT" in text.upper():
-                return ("LOGS › EXPORT", f"Press OK: {text}")
-            if "CLEAR" in text.upper():
-                return ("LOGS › MAINTENANCE", f"Press OK: {text}")
+            if "GO TO DRIVER" in u_text or "DRIVER VIEW" in u_text:
+                return ("SETUP › NAVIGATION", "Press OK: Switch to Driver HUD")
+            if "SIMULATION" in u_text:
+                return ("SETUP › DATA SOURCE", "Press OK: Toggle Synthetic Telemetry Simulation")
+            if "VIEW" in u_text:
+                return ("LOGS › FILE BROWSER", "Press OK: Inspect Selected CSV Telemetry Log")
+            if "EXPORT" in u_text:
+                return ("LOGS › FILE BROWSER", "Press OK: Export Selected Log to USB / Disk")
+            if "RELOAD" in u_text:
+                return ("LOGS › FILE BROWSER", "Press OK: Refresh Session Log List")
+            if "CLEAR" in u_text or "DELETE" in u_text:
+                return ("LOGS › MAINTENANCE", "Press OK: Delete Selected Log File")
+            if "START" in u_text and ("LOG" in u_text or "REC" in u_text or "●" in u_text):
+                return ("LOGS › RECORDER", "Press OK: Start Session Recording")
+            if "STOP" in u_text and ("LOG" in u_text or "REC" in u_text or "●" in u_text):
+                return ("LOGS › RECORDER", "Press OK: Stop Session Recording")
+            if "SNAPSHOT" in u_text:
+                return ("LOGS › RECORDER", "Press OK: Save Instant CSV Snapshot")
+            if "START FEED" in u_text or "STOP FEED" in u_text:
+                return ("LOGS › TELEMETRY FEED", f"Press OK: {text}")
+            if "BACK" in u_text:
+                return ("LOGS › VIEWER", "Press OK: Return to Session Log List")
             if text:
                 return (f"SELECTOR › {text}", f"Press OK: Activate {text}")
+
+        # 6. Dropdown Combo Box
+        if isinstance(widget, QComboBox):
+            curr_text = widget.currentText()
+            return (f"SETUP › TYPEFACE ({curr_text})", "Press OK: Open Font Dropdown Menu")
 
         # 6. ScrollArea / CellGrid
         if isinstance(widget, QScrollArea):
@@ -126,6 +157,34 @@ class FiveKeyNavigation(QObject):
             row = widget.currentRow()
             row_info = f"Row {row + 1}" if row >= 0 else "Select Log"
             return (f"LOGS › SESSION TABLE ({row_info})", "Use Up/Down to navigate  |  Press OK: Inspect Details")
+
+        # 8. Metric Tiles (Overview & Driver)
+        if isinstance(widget, MetricTile):
+            title = ""
+            for lbl in widget.findChildren(QLabel):
+                if lbl.property("role") == "title":
+                    title = lbl.text().strip()
+                    break
+            val = getattr(widget, "value", None)
+            val_text = val.text().strip() if val else ""
+            prefix = "DRIVER" if self.window._shells.currentIndex() == 0 else "OVERVIEW"
+            if "SPREAD" in title:
+                return (f"{prefix} › {title}: {val_text}", "Press OK: Open Cell Voltages & Temperatures Matrix")
+            return (f"{prefix} › {title}: {val_text}", f"Press OK: View {title} in Trends Chart")
+
+        # 9. Health Bar & Faults & Special Cards
+        if isinstance(widget, SegmentHealthBar):
+            return ("OVERVIEW › SEGMENTS HEALTH BAR", "Press OK: Open Cell Voltages & Temperatures Matrix")
+        if isinstance(widget, FaultPanel):
+            return ("OVERVIEW › ACTIVE FAULTS PANEL", "Press OK: Open Session Logs & Fault Diagnostics")
+        if getattr(widget, "objectName", lambda: "")() == "card":
+            curr = self.window.stack.currentWidget() if hasattr(self.window, "stack") else None
+            if curr and widget is getattr(curr, "charge_card", None):
+                return ("OVERVIEW › BATTERY CHARGE CARD", "Press OK: View State of Charge in Trends Chart")
+            if curr and widget is getattr(curr, "summary_card", None):
+                return ("SEGMENTS › PACK SUMMARY READOUTS", "Use Down arrow to inspect Cell Voltages Matrix")
+            if curr and widget is getattr(curr, "temp_card", None):
+                return ("SEGMENTS › TEMPERATURE SENSORS MATRIX", "Press OK: View Temperatures in Trends Chart")
 
         return (f"CURRENT: {text or type(widget).__name__}", "Press OK to select")
 
@@ -151,15 +210,30 @@ class FiveKeyNavigation(QObject):
     def _controls(self, root):
         if root is None:
             return []
+        from PyQt5.QtWidgets import QFrame
         candidates = []
-        if isinstance(root, CONTROL_TYPES):
+        if isinstance(root, CONTROL_TYPES) or (isinstance(root, QFrame) and root.focusPolicy() == Qt.StrongFocus):
             candidates.append(root)
         candidates.extend(root.findChildren(CONTROL_TYPES))
+        for frame in root.findChildren(QFrame):
+            if frame.focusPolicy() == Qt.StrongFocus and frame not in candidates:
+                candidates.append(frame)
         controls = []
         for widget in candidates:
-            if widget.isHidden() or not widget.isEnabled():
+            if (widget.window().isVisible() and not widget.isVisible()) or widget.isHidden() or not widget.isEnabled():
                 continue
             if isinstance(widget, QLineEdit) and widget.isReadOnly():
+                continue
+            # Exclude internal dropdown popup views of QComboBox
+            curr = widget
+            is_combo_popup = False
+            while curr is not None:
+                if isinstance(curr, QComboBox) or "Combo" in type(curr).__name__:
+                    if curr is not widget:
+                        is_combo_popup = True
+                        break
+                curr = curr.parent()
+            if is_combo_popup:
                 continue
             widget.setFocusPolicy(Qt.StrongFocus)
             controls.append(widget)
@@ -263,6 +337,43 @@ class FiveKeyNavigation(QObject):
                 curr = curr.parentWidget()
         elif isinstance(focus, (QListWidget, QTreeWidget, QSpinBox, QDoubleSpinBox, QLineEdit)):
             focus.setFocus()
+        elif isinstance(focus, MetricTile):
+            if self.window._shells.currentIndex() == 0:
+                self.window.set_mode(ENGINEER)
+            title = ""
+            for lbl in focus.findChildren(QLabel):
+                if lbl.property("role") == "title":
+                    title = lbl.text().strip()
+                    break
+            if "SPREAD" in title:
+                self.window.show_page(1)
+            else:
+                channel_map = {"PACK": 0, "CURRENT": 1, "POWER": 2, "HOT SPOT": 4, "AVG TEMP": 4, "MAX TEMP": 4}
+                ch = channel_map.get(title, 0)
+                self.window.show_page(2)
+                trends = self.window.stack.currentWidget()
+                if hasattr(trends, "_select_channel"):
+                    trends._select_channel(ch)
+        elif isinstance(focus, SegmentHealthBar):
+            self.window.show_page(1)
+        elif isinstance(focus, FaultPanel):
+            self.window.show_page(3)
+        elif getattr(focus, "objectName", lambda: "")() == "card":
+            curr = self.window.stack.currentWidget() if hasattr(self.window, "stack") else None
+            if curr and focus is getattr(curr, "charge_card", None):
+                self.window.show_page(2)
+                trends = self.window.stack.currentWidget()
+                if hasattr(trends, "_select_channel"):
+                    trends._select_channel(3)  # SOC channel
+            elif curr and focus is getattr(curr, "temp_card", None):
+                self.window.show_page(2)
+                trends = self.window.stack.currentWidget()
+                if hasattr(trends, "_select_channel"):
+                    trends._select_channel(4)  # TEMP channel
+            elif curr and focus is getattr(curr, "summary_card", None):
+                cell_scroll = getattr(curr, "cell_scroll", None)
+                if cell_scroll:
+                    cell_scroll.setFocus()
 
     # ── Event Filter ───────────────────────────────────────────────────────
     def eventFilter(self, watched, event):

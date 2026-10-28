@@ -32,17 +32,17 @@ class SetupPage(QWidget):
         self._ip = None
 
         outer = QVBoxLayout(self)
-        outer.setContentsMargins(8, 8, 8, 8)
-        outer.setSpacing(8)
+        outer.setContentsMargins(8, 4, 8, 4)
+        outer.setSpacing(6)
 
         row = QHBoxLayout()
-        row.setSpacing(8)
+        row.setSpacing(6)
         row.addWidget(self._build_display(), 1)
         row.addWidget(self._build_source(), 1)
         outer.addLayout(row, 1)
 
         bottom = QHBoxLayout()
-        bottom.setSpacing(8)
+        bottom.setSpacing(6)
         bottom.addWidget(self._build_about(), 1)
         bottom.addWidget(self._build_actions(), 0)
         outer.addLayout(bottom, 0)
@@ -107,9 +107,7 @@ class SetupPage(QWidget):
 
         self._source_state = label("", size="LEAD", weight=700, mono=True)
         column.addWidget(self._source_state)
-        column.addWidget(label("With no CAN bus attached the pack reads at rest. "
-                               "Simulation drives a synthetic run for bench testing "
-                               "and demos — never trust it for a real pack.",
+        column.addWidget(label("Simulation drives synthetic pack telemetry for bench testing.",
                                role="caption", wrap=True))
 
         self._sim_button = QPushButton()

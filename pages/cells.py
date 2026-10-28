@@ -23,7 +23,9 @@ class SegmentDetailsPage(QWidget):
         outer = QVBoxLayout(self)
         outer.setContentsMargins(6, 6, 6, 6)
         outer.setSpacing(6)
-        outer.addWidget(self._build_summary())
+        self.summary_card = self._build_summary()
+        self.summary_card.setFocusPolicy(Qt.StrongFocus)
+        outer.addWidget(self.summary_card)
 
         grids = QHBoxLayout()
         grids.setSpacing(6)
@@ -31,7 +33,9 @@ class SegmentDetailsPage(QWidget):
         grids.addWidget(self._build_cell_card(), 1)
         self.temps = TempGrid()
         self._temp_summary = label("", role="caption", mono=True)
-        grids.addWidget(self._grid_card("TEMPERATURE", self._temp_summary, self.temps), 1)
+        self.temp_card = self._grid_card("TEMPERATURE", self._temp_summary, self.temps)
+        self.temp_card.setFocusPolicy(Qt.StrongFocus)
+        grids.addWidget(self.temp_card, 1)
         outer.addLayout(grids, 1)
 
     def _build_cell_card(self):

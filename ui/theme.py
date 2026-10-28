@@ -159,6 +159,16 @@ def _build_qss():
     r_sm, r_md, r_pill = RADIUS["SM"], RADIUS["MD"], RADIUS["PILL"]
     ok, warn, crit, info = (STATUS_FG[k] for k in ("ok", "warn", "crit", "info"))
 
+    cyan = '#00E5FF' if TM.is_dark else '#0284C7'
+    cyan_hi = '#38BDF8' if TM.is_dark else '#0369A1'
+    rgba_cyan_subtle = 'rgba(0, 229, 255, 0.12)' if TM.is_dark else 'rgba(2, 132, 199, 0.10)'
+    rgba_cyan = 'rgba(0, 229, 255, 0.25)' if TM.is_dark else 'rgba(2, 132, 199, 0.18)'
+    rgba_cyan_med = 'rgba(0, 229, 255, 0.35)' if TM.is_dark else 'rgba(2, 132, 199, 0.25)'
+    rgba_cyan_strong = 'rgba(0, 229, 255, 0.45)' if TM.is_dark else 'rgba(2, 132, 199, 0.35)'
+    text_hi = '#FFFFFF' if TM.is_dark else p['TEXT']
+    pad_pill_h = max(8, int(round(14 / TM.font_scale)))
+    pad_pill_v = max(4, int(round(6 / TM.font_scale)))
+
     return f"""
 * {{ font-family:{ff}; color:{p['TEXT']}; outline:none; }}
 QMainWindow, QWidget {{ background:{p['BG']}; }}
@@ -208,7 +218,7 @@ QPushButton#stop  {{ background:{crit}; color:#FFFFFF; border:none;
 
 QPushButton#pill {{ background:{p['SURFACE']}; color:{p['TEXT_2']};
     border:{bw}px solid {p['LINE']}; border-radius:{r_pill}px;
-    padding:6px 14px; min-height:34px; font-size:{sz('SMALL')}px; font-weight:600; }}
+    padding:{pad_pill_v}px {pad_pill_h}px; min-height:30px; font-size:{sz('SMALL')}px; font-weight:600; }}
 QPushButton#pill:hover {{ border-color:{p['ACCENT']}; color:{p['ACCENT']}; }}
 QPushButton#pill:checked {{ background:{p['ACCENT']}; color:#FFFFFF; border-color:{p['ACCENT']}; }}
 QPushButton#tab {{ background:{p['SURFACE']}; color:{p['TEXT_2']};
@@ -299,19 +309,19 @@ QMessageBox QPushButton {{ background:{p['SURFACE']}; color:{p['TEXT']};
 
 QFrame#selector_hud {{
     background:{'#0F172A' if not TM.is_dark else '#07101E'};
-    border:1.5px solid {'#0284C7' if not TM.is_dark else '#00E5FF'};
+    border:1.5px solid {cyan};
     border-radius:6px;
 }}
 QFrame#selector_hud QLabel#hud_title {{
-    color:{'#0284C7' if not TM.is_dark else '#00E5FF'};
+    color:{cyan};
     font-weight:900;
     font-size:{sz('CAPTION')}px;
     letter-spacing:0.8px;
 }}
 QFrame#selector_hud QLabel#hud_loc {{
-    color:{p['TEXT'] if not TM.is_dark else '#FFFFFF'};
+    color:{text_hi};
     font-weight:800;
-    font-size:{sz('BODY')}px;
+    font-size:{sz('SMALL')}px;
     letter-spacing:0.4px;
 }}
 QFrame#selector_hud QLabel#hud_div {{
@@ -327,7 +337,7 @@ QFrame#selector_hud QLabel#hud_action_title {{
 QFrame#selector_hud QLabel#hud_action {{
     color:{'#15803D' if not TM.is_dark else '#34D399'};
     font-weight:800;
-    font-size:{sz('BODY')}px;
+    font-size:{sz('SMALL')}px;
 }}
 QFrame#selector_hud QLabel#hud_hint {{
     color:{p['TEXT_3'] if not TM.is_dark else '#64748B'};
@@ -337,6 +347,7 @@ QFrame#selector_hud QLabel#hud_hint {{
 
 /* =========================================================================
    UNIVERSAL HIGH-VISIBILITY SELECTOR BOX (5-KEY HARDWARE NAVIGATION)
+   Every single interactive widget/box lights up in bright neon cyan!
    ========================================================================= */
 QPushButton:focus,
 QComboBox:focus,
@@ -347,66 +358,167 @@ QSpinBox:focus,
 QDoubleSpinBox:focus,
 QLineEdit:focus,
 QScrollArea:focus {{
-    border: 3px solid {'#0284C7' if not TM.is_dark else '#00E5FF'};
-    background-color: {'rgba(2, 132, 199, 0.18)' if not TM.is_dark else 'rgba(0, 229, 255, 0.25)'};
-    color: {p['TEXT'] if not TM.is_dark else '#FFFFFF'};
+    border: 3px solid {cyan};
+    background-color: {rgba_cyan};
+    color: {text_hi};
+}}
+
+QPushButton#primary:focus {{
+    border: 3px solid {cyan};
+    border-radius: {r_md}px;
+    background-color: {p['ACCENT']};
+    color: #FFFFFF;
+    font-weight: 900;
+}}
+
+QPushButton#ghost:focus {{
+    border: 3px solid {cyan};
+    border-radius: {r_md}px;
+    background-color: {rgba_cyan};
+    color: {cyan};
+    font-weight: 800;
+}}
+
+QPushButton#danger:focus {{
+    border: 3px solid {cyan};
+    border-radius: {r_md}px;
+    background-color: {crit};
+    color: #FFFFFF;
+    font-weight: 900;
+}}
+
+QPushButton#start:focus {{
+    border: 3px solid {cyan};
+    border-radius: {r_md}px;
+    background-color: {ok};
+    color: #05130A;
+    font-weight: 900;
+}}
+
+QPushButton#stop:focus {{
+    border: 3px solid {cyan};
+    border-radius: {r_md}px;
+    background-color: {crit};
+    color: #FFFFFF;
+    font-weight: 900;
 }}
 
 QPushButton#pill:focus {{
-    border: 3px solid {'#0284C7' if not TM.is_dark else '#00E5FF'};
+    border: 3px solid {cyan};
     border-radius: {r_pill}px;
-    background-color: {'rgba(2, 132, 199, 0.25)' if not TM.is_dark else 'rgba(0, 229, 255, 0.35)'};
-    color: {p['TEXT'] if not TM.is_dark else '#FFFFFF'};
+    background-color: {rgba_cyan_med};
+    color: {text_hi};
     font-weight: 800;
 }}
 
 QPushButton#pill:checked:focus {{
-    border: 3px solid {'#0369A1' if not TM.is_dark else '#00E5FF'};
+    border: 3px solid {cyan};
     border-radius: {r_pill}px;
-    background-color: {'#0284C7' if not TM.is_dark else '#0891B2'};
+    background-color: {p['ACCENT']};
     color: #FFFFFF;
-    font-weight: 800;
+    font-weight: 900;
+}}
+
+QPushButton#tab:focus {{
+    border: 3px solid {cyan};
+    border-radius: {r_sm}px;
+    background-color: {rgba_cyan};
+    color: {cyan};
+    font-weight: 900;
+}}
+
+QPushButton#tab:checked:focus {{
+    border: 3px solid {cyan};
+    border-radius: {r_sm}px;
+    background-color: {p['ACCENT']};
+    color: #FFFFFF;
+    font-weight: 900;
 }}
 
 QPushButton#nav:focus {{
-    border: 3px solid {'#0284C7' if not TM.is_dark else '#00E5FF'};
+    border: 3px solid {cyan};
     border-radius: 6px;
-    background-color: {'rgba(2, 132, 199, 0.22)' if not TM.is_dark else 'rgba(0, 229, 255, 0.30)'};
-    color: {'#0284C7' if not TM.is_dark else '#00E5FF'};
+    background-color: {rgba_cyan};
+    color: {cyan};
     font-weight: 900;
 }}
 
 QPushButton#nav:checked:focus {{
-    border: 3px solid {'#0284C7' if not TM.is_dark else '#00E5FF'};
+    border: 3px solid {cyan};
     border-radius: 6px;
-    background-color: {'rgba(2, 132, 199, 0.35)' if not TM.is_dark else 'rgba(0, 229, 255, 0.40)'};
-    color: {'#0284C7' if not TM.is_dark else '#00E5FF'};
+    background-color: {rgba_cyan_strong};
+    color: {cyan};
     font-weight: 900;
 }}
 
 QPushButton#mode:focus,
 QPushButton#driver_mode:focus {{
-    border: 3px solid {'#0284C7' if not TM.is_dark else '#00E5FF'};
+    border: 3px solid {cyan};
     border-radius: {r_sm + 2}px;
-    background-color: {'rgba(2, 132, 199, 0.25)' if not TM.is_dark else 'rgba(0, 229, 255, 0.35)'};
-    color: {p['TEXT'] if not TM.is_dark else '#FFFFFF'};
+    background-color: {rgba_cyan_med};
+    color: {text_hi};
     font-weight: 900;
 }}
 
 QPushButton#driver_feed:focus {{
-    border: 3px solid {'#0284C7' if not TM.is_dark else '#00E5FF'};
+    border: 3px solid {cyan};
     border-radius: {r_sm + 2}px;
-    background-color: {'rgba(2, 132, 199, 0.35)' if not TM.is_dark else 'rgba(0, 229, 255, 0.35)'};
+    background-color: {rgba_cyan_strong};
     color: #FFFFFF;
     font-weight: 900;
 }}
 
+QFrame#card:focus,
+MetricTile:focus {{
+    border: 3px solid {cyan};
+    border-radius: {r_md}px;
+    background-color: {rgba_cyan_subtle};
+}}
+
+QSlider:focus {{
+    border: 2px solid {cyan};
+    border-radius: 8px;
+    background: {rgba_cyan_subtle};
+    padding: 3px;
+}}
+
+QSlider:focus::groove:horizontal {{
+    background: {cyan};
+    height: 6px;
+    border-radius: 3px;
+}}
+
 QSlider:focus::handle:horizontal {{
-    border: 3px solid {'#0284C7' if not TM.is_dark else '#00E5FF'};
-    background: {'#0284C7' if not TM.is_dark else '#00E5FF'};
-    width: 26px;
-    height: 26px;
-    margin: -11px 0;
-    border-radius: 13px;
+    border: 3px solid {cyan};
+    background: #FFFFFF;
+    width: 24px;
+    height: 24px;
+    margin: -9px 0;
+    border-radius: 12px;
+}}
+
+QComboBox:focus {{
+    border: 3px solid {cyan};
+    border-radius: {r_sm}px;
+    background-color: {rgba_cyan_med};
+    color: {text_hi};
+    font-weight: 800;
+}}
+
+QScrollArea#grid_scroll:focus {{
+    border: 3px solid {cyan};
+    border-radius: 6px;
+    background-color: {rgba_cyan_subtle};
+}}
+
+QTableWidget:focus {{
+    border: 3px solid {cyan};
+    border-radius: 6px;
+}}
+
+QTableWidget:focus::item:selected {{
+    background-color: {rgba_cyan_strong};
+    color: {cyan};
+    font-weight: 800;
 }}
 """
