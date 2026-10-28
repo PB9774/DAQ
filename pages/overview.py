@@ -20,11 +20,11 @@ class OverviewPage(QWidget):
         self._soc_status = None
 
         outer = QVBoxLayout(self)
-        outer.setContentsMargins(8, 8, 8, 8)
-        outer.setSpacing(8)
+        outer.setContentsMargins(6, 4, 6, 4)
+        outer.setSpacing(4)
 
         top = QHBoxLayout()
-        top.setSpacing(8)
+        top.setSpacing(6)
         self.charge_card = self._build_charge()
         self.charge_card.setFocusPolicy(Qt.StrongFocus)
         top.addWidget(self.charge_card, 0)
@@ -65,13 +65,13 @@ class OverviewPage(QWidget):
 
     def _build_tiles(self):
         grid = QGridLayout()
-        grid.setSpacing(8)
+        grid.setSpacing(6)
         self._tiles = {
             "pack_v": MetricTile("PACK", "V", size="DISPLAY", accent=Color.TEXT),
             "current": MetricTile("CURRENT", "A", size="DISPLAY", accent=Color.CURRENT),
             "power": MetricTile("POWER", "kW", size="DISPLAY", accent=Color.POWER),
-            "delta_v": MetricTile("SPREAD", "mV", size="DISPLAY", detail=True),
-            "tmax": MetricTile("HOT SPOT", "°C", size="DISPLAY", detail=True),
+            "delta_v": MetricTile("SPREAD", "mV", size="TITLE", detail=True),
+            "tmax": MetricTile("HOT SPOT", "°C", size="TITLE", detail=True),
             "tavg": MetricTile("AVG TEMP", "°C", size="DISPLAY", accent=Color.TEXT),
         }
         order = ("pack_v", "current", "power", "delta_v", "tmax", "tavg")

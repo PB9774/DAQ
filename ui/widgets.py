@@ -80,10 +80,10 @@ class MetricTile(QFrame):
         self._accent = accent
         self._status = None
         self._size = size
+        self.detail = None
 
         outer = QVBoxLayout(self)
-        outer.setContentsMargins(14, 10, 14, 10)
-        outer.setSpacing(3)
+        self._apply_spacing()
 
         head = QHBoxLayout()
         head.setSpacing(6)
@@ -97,10 +97,15 @@ class MetricTile(QFrame):
         self.value.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         outer.addWidget(self.value)
 
-        self.detail = None
         if detail:
             self.detail = label("", role="caption", mono=True)
             outer.addWidget(self.detail)
+
+    def _apply_spacing(self):
+        pad_v = max(3, int(round(7 / TM.font_scale)))
+        pad_h = max(8, int(round(12 / TM.font_scale)))
+        self.layout().setContentsMargins(pad_h, pad_v, pad_h, pad_v)
+        self.layout().setSpacing(max(1, int(round(2 / TM.font_scale))))
 
     def set_value(self, text, status=None):
         set_text(self.value, text)
@@ -115,6 +120,7 @@ class MetricTile(QFrame):
 
     def restyle(self):
         self._status = None
+        self._apply_spacing()
 
 
 class StatusPill(QLabel):

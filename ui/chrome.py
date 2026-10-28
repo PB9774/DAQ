@@ -138,7 +138,7 @@ class SelectorHUD(QFrame):
         row.setContentsMargins(12, 2, 12, 2)
         row.setSpacing(8)
 
-        lbl_loc = label("⯈ LOCATION:", role="title")
+        lbl_loc = label("⯈", role="title")
         lbl_loc.setObjectName("hud_title")
         row.addWidget(lbl_loc)
 
@@ -152,7 +152,7 @@ class SelectorHUD(QFrame):
         row.addWidget(div)
         row.addSpacing(4)
 
-        lbl_action = label("PRESS OK:", role="title")
+        lbl_action = label("OK:", role="title")
         lbl_action.setObjectName("hud_action_title")
         row.addWidget(lbl_action)
 
@@ -162,7 +162,7 @@ class SelectorHUD(QFrame):
 
         row.addStretch()
 
-        self._hint = label("5-KEY NAV: [↑] [↓] [←] [→]  [OK / Space]", role="caption", mono=True)
+        self._hint = label("[↑↓←→]  [OK]", role="caption", mono=True)
         self._hint.setObjectName("hud_hint")
         row.addWidget(self._hint)
 

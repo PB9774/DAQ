@@ -125,6 +125,11 @@ def restyle_tree(root):
         spec = getattr(widget, "_scaled_width_spec", None)
         if spec is not None:
             _apply_scaled_width(widget, *spec)
+        spec = getattr(widget, "_card_spec", None)
+        if spec is not None:
+            _apply_card_spec(widget)
+        if hasattr(widget, "_apply_spacing"):
+            widget._apply_spacing()
 
 
 # ── status classification: the single source of truth for colour ───────────
@@ -185,15 +190,27 @@ def _apply_label_spec(widget, spec):
     set_ss(widget, ";".join(bits) + ";background:transparent;border:none;")
 
 
+def _apply_card_spec(frame):
+    spec = getattr(frame, "_card_spec", None)
+    if not spec:
+        return
+    margins, spacing = spec
+    layout = frame.layout()
+    if layout is None:
+        return
+    pad_factor = 0.80 if TM.font_scale >= 1.25 else (0.88 if TM.font_scale > 1.1 else 1.0)
+    scaled_margins = tuple(max(3, int(m * pad_factor)) for m in margins)
+    scaled_spacing = max(3, int(spacing * pad_factor))
+    layout.setContentsMargins(*scaled_margins)
+    layout.setSpacing(scaled_spacing)
+
+
 def card(name="card", margins=(12, 10, 12, 10), spacing=10, vertical=True):
     frame = QFrame()
     frame.setObjectName(name)
     layout = (QVBoxLayout if vertical else QHBoxLayout)(frame)
-    pad_factor = 0.82 if TM.font_scale > 1.1 else 1.0
-    scaled_margins = tuple(max(4, int(m * pad_factor)) for m in margins)
-    scaled_spacing = max(4, int(spacing * pad_factor))
-    layout.setContentsMargins(*scaled_margins)
-    layout.setSpacing(scaled_spacing)
+    frame._card_spec = (margins, spacing)
+    _apply_card_spec(frame)
     return frame, layout
 
 

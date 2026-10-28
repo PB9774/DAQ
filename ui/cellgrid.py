@@ -256,7 +256,7 @@ class SegmentHealthBar(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._rows = ()
-        set_scaled_height(self, "SMALL", 3.9, 58)
+        set_scaled_height(self, "SMALL", 3.2, 48)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
     def set_data(self, stats):
