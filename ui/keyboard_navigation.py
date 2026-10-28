@@ -21,7 +21,7 @@ CONTROL_TYPES = (
     QLineEdit, QScrollArea,
 )
 ARROWS = (Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down)
-ENTER_KEYS = (Qt.Key_Return, Qt.Key_Enter)
+ENTER_KEYS = (Qt.Key_Return, Qt.Key_Enter, Qt.Key_Space)
 
 
 class FiveKeyNavigation(QObject):
