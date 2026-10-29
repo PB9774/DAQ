@@ -23,7 +23,9 @@ class SegmentDetailsPage(QWidget):
         outer = QVBoxLayout(self)
         outer.setContentsMargins(6, 6, 6, 6)
         outer.setSpacing(6)
-        outer.addWidget(self._build_summary())
+        self.summary_card = self._build_summary()
+        self.summary_card.setFocusPolicy(Qt.StrongFocus)
+        outer.addWidget(self.summary_card)
 
         grids = QHBoxLayout()
         grids.setSpacing(6)
@@ -31,7 +33,9 @@ class SegmentDetailsPage(QWidget):
         grids.addWidget(self._build_cell_card(), 1)
         self.temps = TempGrid()
         self._temp_summary = label("", role="caption", mono=True)
-        grids.addWidget(self._grid_card("TEMPERATURE", self._temp_summary, self.temps), 1)
+        self.temp_card = self._grid_card("TEMPERATURE", self._temp_summary, self.temps)
+        self.temp_card.setFocusPolicy(Qt.StrongFocus)
+        grids.addWidget(self.temp_card, 1)
         outer.addLayout(grids, 1)
 
     def _build_cell_card(self):
@@ -39,24 +43,11 @@ class SegmentDetailsPage(QWidget):
         column.addWidget(label("CELL VOLTAGE", role="title"))
         column.addWidget(label("98 cells · 7 segments", role="caption"))
 
-        self.cell_scroll = QScrollArea()
-        self.cell_scroll.setObjectName("grid_scroll")
-        self.cell_scroll.setWidgetResizable(True)
-        self.cell_scroll.setFrameShape(QFrame.NoFrame)
-        self.cell_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.cell_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.cell_scroll.setFocusPolicy(Qt.StrongFocus)
-        self.cell_scroll.verticalScrollBar().setSingleStep(self.grid.BASE_ROW_H or 32)
-        self.cell_scroll.setWidget(self.grid)
-
-        try:
-            QScroller.grabGesture(self.cell_scroll.viewport(), QScroller.LeftMouseButtonGesture)
-        except Exception:
-            pass
-
-        self.grid_header = SegmentHeader(self.cell_scroll)
+        self.grid_header = SegmentHeader()
         column.addWidget(self.grid_header)
-        column.addWidget(self.cell_scroll, 1)
+
+        self.grid.setFocusPolicy(Qt.StrongFocus)
+        column.addWidget(self.grid, 1)
         return frame
 
     @staticmethod
@@ -128,8 +119,5 @@ class SegmentDetailsPage(QWidget):
         self.grid.update()
         if hasattr(self, "grid_header"):
             self.grid_header.update()
-        if hasattr(self, "cell_scroll"):
-            step = int(round((self.grid.BASE_ROW_H or 50) * TM.font_scale))
-            self.cell_scroll.verticalScrollBar().setSingleStep(step)
         self.temps.update_geometry()
         self.temps.update()

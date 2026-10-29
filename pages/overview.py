@@ -20,19 +20,23 @@ class OverviewPage(QWidget):
         self._soc_status = None
 
         outer = QVBoxLayout(self)
-        outer.setContentsMargins(8, 8, 8, 8)
-        outer.setSpacing(8)
+        outer.setContentsMargins(6, 4, 6, 4)
+        outer.setSpacing(4)
 
         top = QHBoxLayout()
-        top.setSpacing(8)
-        top.addWidget(self._build_charge(), 0)
+        top.setSpacing(6)
+        self.charge_card = self._build_charge()
+        self.charge_card.setFocusPolicy(Qt.StrongFocus)
+        top.addWidget(self.charge_card, 0)
         top.addLayout(self._build_tiles(), 1)
         self.faults = FaultPanel(rows=6)
+        self.faults.setFocusPolicy(Qt.StrongFocus)
         set_scaled_width(self.faults, 298)
         top.addWidget(self.faults, 0)
         outer.addLayout(top, 1)
 
         self.segments = SegmentHealthBar()
+        self.segments.setFocusPolicy(Qt.StrongFocus)
         outer.addWidget(self.segments)
 
     def _build_charge(self):
@@ -61,18 +65,20 @@ class OverviewPage(QWidget):
 
     def _build_tiles(self):
         grid = QGridLayout()
-        grid.setSpacing(8)
+        grid.setSpacing(6)
         self._tiles = {
             "pack_v": MetricTile("PACK", "V", size="DISPLAY", accent=Color.TEXT),
             "current": MetricTile("CURRENT", "A", size="DISPLAY", accent=Color.CURRENT),
             "power": MetricTile("POWER", "kW", size="DISPLAY", accent=Color.POWER),
-            "delta_v": MetricTile("SPREAD", "mV", size="DISPLAY", detail=True),
-            "tmax": MetricTile("HOT SPOT", "°C", size="DISPLAY", detail=True),
+            "delta_v": MetricTile("SPREAD", "mV", size="TITLE", detail=True),
+            "tmax": MetricTile("HOT SPOT", "°C", size="TITLE", detail=True),
             "tavg": MetricTile("AVG TEMP", "°C", size="DISPLAY", accent=Color.TEXT),
         }
         order = ("pack_v", "current", "power", "delta_v", "tmax", "tavg")
         for index, key in enumerate(order):
-            grid.addWidget(self._tiles[key], index // 2, index % 2)
+            tile = self._tiles[key]
+            tile.setFocusPolicy(Qt.StrongFocus)
+            grid.addWidget(tile, index // 2, index % 2)
         return grid
 
     def refresh(self, engine, recorder=None):

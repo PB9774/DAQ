@@ -159,6 +159,16 @@ def _build_qss():
     r_sm, r_md, r_pill = RADIUS["SM"], RADIUS["MD"], RADIUS["PILL"]
     ok, warn, crit, info = (STATUS_FG[k] for k in ("ok", "warn", "crit", "info"))
 
+    cyan = '#00E5FF' if TM.is_dark else '#0284C7'
+    cyan_hi = '#38BDF8' if TM.is_dark else '#0369A1'
+    rgba_cyan_subtle = 'rgba(0, 229, 255, 0.12)' if TM.is_dark else 'rgba(2, 132, 199, 0.10)'
+    rgba_cyan = 'rgba(0, 229, 255, 0.25)' if TM.is_dark else 'rgba(2, 132, 199, 0.18)'
+    rgba_cyan_med = 'rgba(0, 229, 255, 0.35)' if TM.is_dark else 'rgba(2, 132, 199, 0.25)'
+    rgba_cyan_strong = 'rgba(0, 229, 255, 0.45)' if TM.is_dark else 'rgba(2, 132, 199, 0.35)'
+    text_hi = '#FFFFFF' if TM.is_dark else p['TEXT']
+    pad_pill_h = max(8, int(round(14 / TM.font_scale)))
+    pad_pill_v = max(4, int(round(6 / TM.font_scale)))
+
     return f"""
 * {{ font-family:{ff}; color:{p['TEXT']}; outline:none; }}
 QMainWindow, QWidget {{ background:{p['BG']}; }}
@@ -173,6 +183,17 @@ QScrollBar::add-page, QScrollBar::sub-page {{ background:transparent; }}
 
 QFrame#card       {{ background:{p['CARD']}; border:{bw}px solid {p['LINE']}; border-radius:{r_md}px; }}
 QFrame#card_hi    {{ background:{p['CARD_HI']}; border:{bw}px solid {p['LINE_HI']}; border-radius:{r_md}px; }}
+QFrame#display_card,
+QFrame#source_card {{
+    background:{'#111C2A' if TM.is_dark else '#FFFFFF'};
+    border:2px solid {'#2E4766' if TM.is_dark else '#94A3B8'};
+    border-radius:{r_md}px;
+}}
+QFrame#scale_box {{
+    background:{'#09111C' if TM.is_dark else '#E2E8F0'};
+    border:2px solid {'#334D6E' if TM.is_dark else '#94A3B8'};
+    border-radius:8px;
+}}
 QFrame#card_focus {{ background:{p['CARD']}; border:{bw}px solid {p['ACCENT']}; border-radius:{r_md}px; }}
 QFrame#flat       {{ background:{p['SURFACE']}; border:none; border-radius:{r_md}px; }}
 QFrame#rule       {{ background:{p['LINE']}; border:none; }}
@@ -208,15 +229,78 @@ QPushButton#stop  {{ background:{crit}; color:#FFFFFF; border:none;
 
 QPushButton#pill {{ background:{p['SURFACE']}; color:{p['TEXT_2']};
     border:{bw}px solid {p['LINE']}; border-radius:{r_pill}px;
-    padding:6px 14px; min-height:34px; font-size:{sz('SMALL')}px; font-weight:600; }}
+    padding:{pad_pill_v}px {pad_pill_h}px; min-height:30px; font-size:{sz('SMALL')}px; font-weight:600; }}
 QPushButton#pill:hover {{ border-color:{p['ACCENT']}; color:{p['ACCENT']}; }}
 QPushButton#pill:checked {{ background:{p['ACCENT']}; color:#FFFFFF; border-color:{p['ACCENT']}; }}
+QPushButton#scale_pill {{
+    background:{'#132030' if TM.is_dark else '#FFFFFF'};
+    color:{'#E2E8F0' if TM.is_dark else '#1E293B'};
+    border:1.5px solid {'#2E4766' if TM.is_dark else '#CBD5E1'};
+    border-radius:6px;
+    padding:5px 14px;
+    min-height:30px;
+    font-size:{sz('SMALL')}px;
+    font-weight:800;
+}}
+QPushButton#scale_pill:hover {{
+    border-color:{cyan};
+    color:{text_hi};
+    background:{'#1E344E' if TM.is_dark else '#F1F5F9'};
+}}
+QPushButton#scale_pill:checked {{
+    background:{'#0284C7' if not TM.is_dark else '#0284C7'};
+    border:2px solid {cyan};
+    color:#FFFFFF;
+    font-weight:900;
+}}
 QPushButton#tab {{ background:{p['SURFACE']}; color:{p['TEXT_2']};
     border:{bw}px solid {p['LINE']}; border-radius:{r_sm}px;
     padding:4px 6px; min-height:30px; font-size:{sz('CAPTION')}px;
     font-weight:800; letter-spacing:1px; }}
 QPushButton#tab:hover {{ border-color:{p['ACCENT']}; color:{p['ACCENT']}; }}
 QPushButton#tab:checked {{ background:{p['ACCENT']}; color:#FFFFFF; border-color:{p['ACCENT']}; }}
+QPushButton#driver_feed {{
+    background:{p['ACCENT'] if not TM.is_dark else '#1E3A8A'};
+    color:#FFFFFF;
+    border:2px solid {p['ACCENT'] if not TM.is_dark else '#3B82F6'};
+    border-radius:{r_sm + 2}px;
+    padding:6px 14px;
+    min-height:34px;
+    font-size:{sz('SMALL')}px;
+    font-weight:800;
+    letter-spacing:0.6px;
+}}
+QPushButton#driver_feed:hover {{
+    background:{'#1D4ED8' if not TM.is_dark else '#2563EB'};
+    border-color:{'#1E40AF' if not TM.is_dark else '#60A5FA'};
+}}
+QPushButton#driver_feed[active="true"] {{
+    background:{crit};
+    color:#FFFFFF;
+    border:2px solid {crit};
+}}
+QPushButton#driver_feed[active="true"]:hover {{
+    background:#D32F2F;
+    border-color:#B71C1C;
+}}
+
+QPushButton#driver_mode {{
+    background:{p['CARD'] if not TM.is_dark else '#1E293B'};
+    color:{p['TEXT'] if not TM.is_dark else '#F8FAFC'};
+    border:2px solid {p['LINE_HI'] if not TM.is_dark else '#64748B'};
+    border-radius:{r_sm + 2}px;
+    padding:6px 14px;
+    min-height:34px;
+    font-size:{sz('SMALL')}px;
+    font-weight:800;
+    letter-spacing:0.6px;
+}}
+QPushButton#driver_mode:hover {{
+    background:{p['SURFACE'] if not TM.is_dark else '#334155'};
+    border-color:{p['ACCENT'] if not TM.is_dark else '#94A3B8'};
+    color:{p['ACCENT'] if not TM.is_dark else '#FFFFFF'};
+}}
+
 QPushButton#mode {{ background:{p['ACCENT_SOFT']}; color:{p['ACCENT']};
     border:{bw}px solid {p['LINE_HI']}; border-radius:{r_pill}px;
     padding:5px 16px; min-height:34px; font-size:{sz('SMALL')}px; font-weight:800; letter-spacing:1px; }}
@@ -254,4 +338,235 @@ QMessageBox {{ background:{p['CARD']}; }}
 QMessageBox QLabel {{ font-size:{sz('BODY')}px; }}
 QMessageBox QPushButton {{ background:{p['SURFACE']}; color:{p['TEXT']};
     border:1px solid {p['LINE_HI']}; border-radius:{r_sm}px; padding:6px 18px; min-width:80px; }}
+
+QFrame#selector_hud {{
+    background:{'#0F172A' if not TM.is_dark else '#07101E'};
+    border:1.5px solid {cyan};
+    border-radius:6px;
+}}
+QFrame#selector_hud QLabel#hud_title {{
+    color:{cyan};
+    font-weight:900;
+    font-size:{sz('CAPTION')}px;
+    letter-spacing:0.8px;
+}}
+QFrame#selector_hud QLabel#hud_loc {{
+    color:{text_hi};
+    font-weight:800;
+    font-size:{sz('SMALL')}px;
+    letter-spacing:0.4px;
+}}
+QFrame#selector_hud QLabel#hud_div {{
+    color:{p['LINE_HI'] if not TM.is_dark else '#334155'};
+    font-weight:400;
+}}
+QFrame#selector_hud QLabel#hud_action_title {{
+    color:{'#16A34A' if not TM.is_dark else '#38BDF8'};
+    font-weight:900;
+    font-size:{sz('CAPTION')}px;
+    letter-spacing:0.8px;
+}}
+QFrame#selector_hud QLabel#hud_action {{
+    color:{'#15803D' if not TM.is_dark else '#34D399'};
+    font-weight:800;
+    font-size:{sz('SMALL')}px;
+}}
+QFrame#selector_hud QLabel#hud_hint {{
+    color:{p['TEXT_3'] if not TM.is_dark else '#64748B'};
+    font-size:{sz('SMALL')}px;
+    font-weight:700;
+}}
+
+/* =========================================================================
+   UNIVERSAL HIGH-VISIBILITY SELECTOR BOX (5-KEY HARDWARE NAVIGATION)
+   Every single interactive widget/box lights up in bright neon cyan!
+   ========================================================================= */
+QPushButton:focus,
+QComboBox:focus,
+QTableWidget:focus,
+QListWidget:focus,
+QTreeWidget:focus,
+QSpinBox:focus,
+QDoubleSpinBox:focus,
+QLineEdit:focus,
+QScrollArea:focus {{
+    border: 3px solid {cyan};
+    background-color: {rgba_cyan};
+    color: {text_hi};
+}}
+
+QPushButton#primary:focus {{
+    border: 3px solid {cyan};
+    border-radius: {r_md}px;
+    background-color: {p['ACCENT']};
+    color: #FFFFFF;
+    font-weight: 900;
+}}
+
+QPushButton#ghost:focus {{
+    border: 3px solid {cyan};
+    border-radius: {r_md}px;
+    background-color: {rgba_cyan};
+    color: {cyan};
+    font-weight: 800;
+}}
+
+QPushButton#danger:focus {{
+    border: 3px solid {cyan};
+    border-radius: {r_md}px;
+    background-color: {crit};
+    color: #FFFFFF;
+    font-weight: 900;
+}}
+
+QPushButton#start:focus {{
+    border: 3px solid {cyan};
+    border-radius: {r_md}px;
+    background-color: {ok};
+    color: #05130A;
+    font-weight: 900;
+}}
+
+QPushButton#stop:focus {{
+    border: 3px solid {cyan};
+    border-radius: {r_md}px;
+    background-color: {crit};
+    color: #FFFFFF;
+    font-weight: 900;
+}}
+
+QPushButton#pill:focus {{
+    border: 3px solid {cyan};
+    border-radius: {r_pill}px;
+    background-color: {rgba_cyan_med};
+    color: {text_hi};
+    font-weight: 800;
+}}
+
+QPushButton#pill:checked:focus {{
+    border: 3px solid {cyan};
+    border-radius: {r_pill}px;
+    background-color: {p['ACCENT']};
+    color: #FFFFFF;
+    font-weight: 900;
+}}
+
+QPushButton#scale_pill:focus {{
+    border: 3px solid {cyan};
+    border-radius: 6px;
+    background-color: {rgba_cyan_med};
+    color: {text_hi};
+    font-weight: 900;
+}}
+
+QPushButton#scale_pill:checked:focus {{
+    border: 3px solid {cyan};
+    border-radius: 6px;
+    background-color: {'#0284C7' if not TM.is_dark else '#0891B2'};
+    color: #FFFFFF;
+    font-weight: 900;
+}}
+
+QPushButton#tab:focus {{
+    border: 3px solid {cyan};
+    border-radius: {r_sm}px;
+    background-color: {rgba_cyan};
+    color: {cyan};
+    font-weight: 900;
+}}
+
+QPushButton#tab:checked:focus {{
+    border: 3px solid {cyan};
+    border-radius: {r_sm}px;
+    background-color: {p['ACCENT']};
+    color: #FFFFFF;
+    font-weight: 900;
+}}
+
+QPushButton#nav:focus {{
+    border: 3px solid {cyan};
+    border-radius: 6px;
+    background-color: {rgba_cyan};
+    color: {cyan};
+    font-weight: 900;
+}}
+
+QPushButton#nav:checked:focus {{
+    border: 3px solid {cyan};
+    border-radius: 6px;
+    background-color: {rgba_cyan_strong};
+    color: {cyan};
+    font-weight: 900;
+}}
+
+QPushButton#mode:focus,
+QPushButton#driver_mode:focus {{
+    border: 3px solid {cyan};
+    border-radius: {r_sm + 2}px;
+    background-color: {rgba_cyan_med};
+    color: {text_hi};
+    font-weight: 900;
+}}
+
+QPushButton#driver_feed:focus {{
+    border: 3px solid {cyan};
+    border-radius: {r_sm + 2}px;
+    background-color: {rgba_cyan_strong};
+    color: #FFFFFF;
+    font-weight: 900;
+}}
+
+QFrame#card:focus,
+MetricTile:focus {{
+    border: 3px solid {cyan};
+    border-radius: {r_md}px;
+    background-color: {rgba_cyan_subtle};
+}}
+
+QSlider:focus {{
+    border: 2px solid {cyan};
+    border-radius: 8px;
+    background: {rgba_cyan_subtle};
+    padding: 3px;
+}}
+
+QSlider:focus::groove:horizontal {{
+    background: {cyan};
+    height: 6px;
+    border-radius: 3px;
+}}
+
+QSlider:focus::handle:horizontal {{
+    border: 3px solid {cyan};
+    background: #FFFFFF;
+    width: 24px;
+    height: 24px;
+    margin: -9px 0;
+    border-radius: 12px;
+}}
+
+QComboBox:focus {{
+    border: 3px solid {cyan};
+    border-radius: {r_sm}px;
+    background-color: {rgba_cyan_med};
+    color: {text_hi};
+    font-weight: 800;
+}}
+
+QScrollArea#grid_scroll:focus {{
+    border: 3px solid {cyan};
+    border-radius: 6px;
+    background-color: {rgba_cyan_subtle};
+}}
+
+QTableWidget:focus {{
+    border: 3px solid {cyan};
+    border-radius: 6px;
+}}
+
+QTableWidget:focus::item:selected {{
+    background-color: {rgba_cyan_strong};
+    color: {cyan};
+    font-weight: 800;
+}}
 """

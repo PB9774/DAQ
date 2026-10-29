@@ -71,7 +71,7 @@ class _Grid(QWidget):
             row_h = int(round(self.BASE_ROW_H * TM.font_scale))
             self.setMinimumHeight(int(header_h + self.ROWS * row_h + _GAP * (self.ROWS - 1)))
         else:
-            self.setMinimumHeight(int(header_h + self.ROWS * 22))
+            self.setMinimumHeight(int(header_h + self.ROWS * 18))
 
     def paintEvent(self, _event):
         if not self._values:
@@ -91,11 +91,11 @@ class _Grid(QWidget):
         tag_font = QFont(MONO_QFONT)
         tag_font.setStyleHint(QFont.Monospace)
         tag_font.setFamilies(["JetBrains Mono", "DejaVu Sans Mono", "Consolas", "monospace"])
-        tag_font.setPixelSize(max(9, min(10, int(box_h * 0.32))))
+        tag_font.setPixelSize(max(8, min(10, int(box_h * 0.40))))
         value_font = QFont(MONO_QFONT)
         value_font.setStyleHint(QFont.Monospace)
         value_font.setFamilies(["JetBrains Mono", "DejaVu Sans Mono", "Consolas", "monospace"])
-        value_font.setPixelSize(max(11, min(13, int(box_h * 0.40))))
+        value_font.setPixelSize(max(10, min(13, int(box_h * 0.48))))
         value_font.setBold(True)
 
         if self.has_header:
@@ -112,6 +112,20 @@ class _Grid(QWidget):
             self._draw_box(painter, box, bg, fg, index)
             self._draw_text(painter, box, tag_font, value_font, fg,
                             self.TAG % (row + 1), self.format(value))
+
+        if self.hasFocus():
+            cyan = QColor("#00E5FF" if TM.is_dark else "#0284C7")
+            painter.setPen(QPen(cyan, 3.0))
+            painter.setBrush(Qt.NoBrush)
+            painter.drawRoundedRect(QRectF(self.rect()).adjusted(1, 1, -1, -1), 6, 6)
+
+    def focusInEvent(self, event):
+        super().focusInEvent(event)
+        self.update()
+
+    def focusOutEvent(self, event):
+        super().focusOutEvent(event)
+        self.update()
 
     def _draw_box(self, painter, box, bg, fg, index):
         high, low = self._marks
@@ -178,29 +192,8 @@ class CellGrid(_Grid):
 
     ROWS = CELLS_PER_SEGMENT
     TAG = "C%02d"
-    BASE_ROW_H = 50
+    BASE_ROW_H = None
     HAS_HEADER = False
-
-    @staticmethod
-    def _draw_text(painter, box, tag_font, value_font, fg, tag, value):
-        faded = QColor(fg)
-        faded.setAlpha(160)
-        painter.setPen(QPen(faded))
-        tf = QFont(MONO_QFONT)
-        tf.setStyleHint(QFont.Monospace)
-        tf.setFamilies(["JetBrains Mono", "DejaVu Sans Mono", "Consolas", "monospace"])
-        tf.setPixelSize(max(9, int(round(10 * TM.font_scale))))
-        painter.setFont(tf)
-        painter.drawText(box.adjusted(6, 4, -6, 0), Qt.AlignLeft | Qt.AlignTop, tag)
-
-        painter.setPen(QPen(fg))
-        vf = QFont(MONO_QFONT)
-        vf.setStyleHint(QFont.Monospace)
-        vf.setFamilies(["JetBrains Mono", "DejaVu Sans Mono", "Consolas", "monospace"])
-        vf.setPixelSize(max(13, int(round(15 * TM.font_scale))))
-        vf.setBold(True)
-        painter.setFont(vf)
-        painter.drawText(box.adjusted(6, 0, -6, -6), Qt.AlignCenter | Qt.AlignBottom, value)
 
     def set_data(self, engine):
         values = tuple(round(cell.voltage, 3)
@@ -256,7 +249,7 @@ class SegmentHealthBar(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._rows = ()
-        set_scaled_height(self, "SMALL", 3.9, 58)
+        set_scaled_height(self, "SMALL", 3.2, 48)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
     def set_data(self, stats):
@@ -308,3 +301,17 @@ class SegmentHealthBar(QWidget):
             painter.setPen(QPen(QColor(Color.TEXT_2)))
             painter.drawText(box.adjusted(8, 0, -8, -4), Qt.AlignRight | Qt.AlignBottom,
                              "Δ %.0f mV" % (delta_v * 1000))
+
+        if self.hasFocus():
+            cyan = QColor("#00E5FF" if TM.is_dark else "#0284C7")
+            painter.setPen(QPen(cyan, 3.0))
+            painter.setBrush(Qt.NoBrush)
+            painter.drawRoundedRect(QRectF(self.rect()).adjusted(1, 1, -1, -1), 8, 8)
+
+    def focusInEvent(self, event):
+        super().focusInEvent(event)
+        self.update()
+
+    def focusOutEvent(self, event):
+        super().focusOutEvent(event)
+        self.update()

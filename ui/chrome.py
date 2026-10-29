@@ -124,6 +124,53 @@ class StatusStrip(QFrame):
         self._pill.restyle()
 
 
+class SelectorHUD(QFrame):
+    """Clean, high-contrast HUD strip displaying the current dashboard location
+    and what action will occur if OK (Spacebar/Enter) is pressed.
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setObjectName("selector_hud")
+        set_scaled_height(self, "CAPTION", 2.2, 30)
+
+        row = QHBoxLayout(self)
+        row.setContentsMargins(12, 2, 12, 2)
+        row.setSpacing(8)
+
+        lbl_loc = label("⯈", role="title")
+        lbl_loc.setObjectName("hud_title")
+        row.addWidget(lbl_loc)
+
+        self._loc = label("OVERVIEW", size="SMALL", weight=800)
+        self._loc.setObjectName("hud_loc")
+        row.addWidget(self._loc)
+
+        row.addSpacing(4)
+        div = label("│", role="caption")
+        div.setObjectName("hud_div")
+        row.addWidget(div)
+        row.addSpacing(4)
+
+        lbl_action = label("OK:", role="title")
+        lbl_action.setObjectName("hud_action_title")
+        row.addWidget(lbl_action)
+
+        self._action = label("Navigate with arrow keys", size="SMALL", weight=700)
+        self._action.setObjectName("hud_action")
+        row.addWidget(self._action)
+
+        row.addStretch()
+
+        self._hint = label("[↑↓←→]  [OK]", role="caption", mono=True)
+        self._hint.setObjectName("hud_hint")
+        row.addWidget(self._hint)
+
+    def update_info(self, location, action):
+        set_text(self._loc, location)
+        set_text(self._action, action)
+
+
 class NavBar(QWidget):
     page_changed = pyqtSignal(int)
     driver_requested = pyqtSignal()
@@ -142,6 +189,7 @@ class NavBar(QWidget):
         driver.setObjectName("mode")
         driver.setCursor(Qt.PointingHandCursor)
         driver.clicked.connect(self.driver_requested.emit)
+        self.driver_button = driver
         row.addWidget(driver)
         row.addSpacing(6)
 
@@ -163,3 +211,8 @@ class NavBar(QWidget):
         """Sync the tab highlight without re-emitting page_changed."""
         for position, button in enumerate(self._buttons):
             button.setChecked(position == index)
+
+    @property
+    def all_buttons(self):
+        driver_btn = getattr(self, "driver_button", None)
+        return ([driver_btn] if driver_btn else []) + self._buttons

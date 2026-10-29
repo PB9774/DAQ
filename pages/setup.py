@@ -7,7 +7,7 @@ the window owns the consequences (restyle, mode switch, restart).
 
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import (
-    QComboBox, QGridLayout, QHBoxLayout, QMessageBox, QPushButton, QSlider,
+    QComboBox, QFrame, QGridLayout, QHBoxLayout, QMessageBox, QPushButton, QSlider,
     QVBoxLayout, QWidget,
 )
 
@@ -32,62 +32,63 @@ class SetupPage(QWidget):
         self._ip = None
 
         outer = QVBoxLayout(self)
-        outer.setContentsMargins(8, 8, 8, 8)
-        outer.setSpacing(8)
+        outer.setContentsMargins(8, 4, 8, 4)
+        outer.setSpacing(6)
 
         row = QHBoxLayout()
-        row.setSpacing(8)
+        row.setSpacing(6)
         row.addWidget(self._build_display(), 1)
         row.addWidget(self._build_source(), 1)
         outer.addLayout(row, 1)
 
         bottom = QHBoxLayout()
-        bottom.setSpacing(8)
+        bottom.setSpacing(6)
         bottom.addWidget(self._build_about(), 1)
         bottom.addWidget(self._build_actions(), 0)
         outer.addLayout(bottom, 0)
 
     # ── display ────────────────────────────────────────────────────────────
     def _build_display(self):
-        frame, column = card(margins=(12, 10, 12, 10), spacing=8)
-        column.addWidget(label("DISPLAY", role="title"))
+        frame, column = card(name="display_card", margins=(12, 10, 12, 10), spacing=8)
+        column.addWidget(label("DISPLAY PREFERENCES", role="title", weight=800))
 
         grid = QGridLayout()
         grid.setSpacing(8)
         grid.setColumnStretch(1, 1)
 
-        grid.addWidget(label("THEME", role="caption"), 0, 0)
+        grid.addWidget(label("THEME", role="caption", weight=700), 0, 0)
         self._theme_button = QPushButton()
         self._theme_button.setObjectName("pill")
         self._theme_button.setCursor(Qt.PointingHandCursor)
         self._theme_button.clicked.connect(self._toggle_theme)
         grid.addWidget(self._theme_button, 0, 1)
 
-        grid.addWidget(label("TEXT SIZE", role="caption"), 1, 0)
-        sizes = QHBoxLayout()
-        sizes.setSpacing(4)
+        grid.addWidget(label("TEXT SIZE", role="caption", weight=700), 1, 0)
+        holder = QFrame()
+        holder.setObjectName("scale_box")
+        sizes = QHBoxLayout(holder)
+        sizes.setContentsMargins(4, 4, 4, 4)
+        sizes.setSpacing(6)
         self._scale_buttons = []
         for text, value in SCALES:
             button = QPushButton(text)
-            button.setObjectName("pill")
+            button.setObjectName("scale_pill")
             button.setCheckable(True)
             button.setChecked(abs(TM.font_scale - value) < 0.01)
             button.setCursor(Qt.PointingHandCursor)
             button.clicked.connect(lambda _, v=value: self._set_scale(v))
             self._scale_buttons.append((button, value))
             sizes.addWidget(button)
-        holder = QWidget()
-        holder.setLayout(sizes)
         grid.addWidget(holder, 1, 1)
 
-        grid.addWidget(label("TYPEFACE", role="caption"), 2, 0)
+        grid.addWidget(label("TYPEFACE", role="caption", weight=700), 2, 0)
         family = QComboBox()
         family.addItems(sorted(FAMILIES))
         family.setCurrentText(TM.font_family if TM.font_family in FAMILIES else "Inter")
         family.currentTextChanged.connect(self._set_family)
         grid.addWidget(family, 2, 1)
 
-        grid.addWidget(label("BRIGHTNESS", role="caption"), 3, 0)
+        grid.addWidget(label("BRIGHTNESS", role="caption", weight=700), 3, 0)
         self._brightness = QSlider(Qt.Horizontal)
         self._brightness.setRange(35, 100)
         self._brightness.setValue(int(TM.brightness * 100))
@@ -102,14 +103,12 @@ class SetupPage(QWidget):
         return frame
 
     def _build_source(self):
-        frame, column = card(margins=(12, 10, 12, 10), spacing=8)
+        frame, column = card(name="source_card", margins=(12, 10, 12, 10), spacing=8)
         column.addWidget(label("DATA SOURCE", role="title"))
 
         self._source_state = label("", size="LEAD", weight=700, mono=True)
         column.addWidget(self._source_state)
-        column.addWidget(label("With no CAN bus attached the pack reads at rest. "
-                               "Simulation drives a synthetic run for bench testing "
-                               "and demos — never trust it for a real pack.",
+        column.addWidget(label("Simulation drives synthetic pack telemetry for bench testing.",
                                role="caption", wrap=True))
 
         self._sim_button = QPushButton()
