@@ -102,8 +102,8 @@ class MetricTile(QFrame):
             outer.addWidget(self.detail)
 
     def _apply_spacing(self):
-        pad_v = max(3, int(round(7 / TM.font_scale)))
-        pad_h = max(8, int(round(12 / TM.font_scale)))
+        pad_v = max(2, int(round((4 if TM.is_compact else 7) / TM.font_scale)))
+        pad_h = max(6, int(round((8 if TM.is_compact else 12) / TM.font_scale)))
         self.layout().setContentsMargins(pad_h, pad_v, pad_h, pad_v)
         self.layout().setSpacing(max(1, int(round(2 / TM.font_scale))))
 
@@ -149,7 +149,7 @@ class StatusBanner(QFrame):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("card")
-        set_scaled_height(self, "TITLE", 2.6, 52)
+        set_scaled_height(self, "TITLE", 2.0 if TM.is_compact else 2.5, 42 if TM.is_compact else 50)
         self._status = None
 
         row = QHBoxLayout(self)

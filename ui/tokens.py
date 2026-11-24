@@ -48,5 +48,8 @@ MONO_QFONT = "JetBrains Mono"
 # Type scale for a 1024x600 7-inch panel at arm's length.
 TYPE = dict(CAPTION=13, SMALL=15, BODY=17, LEAD=20, TITLE=25, DISPLAY=34, HERO=46)
 
+# Compact type scale for an 800x480 7-inch panel.
+TYPE_COMPACT = dict(CAPTION=11, SMALL=13, BODY=15, LEAD=18, TITLE=21, DISPLAY=28, HERO=38)
+
 RADIUS = dict(SM=6, MD=12, LG=16, PILL=18)
 GAP = dict(XS=4, SM=8, MD=12, LG=16)

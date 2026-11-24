@@ -71,7 +71,8 @@ class _Grid(QWidget):
             row_h = int(round(self.BASE_ROW_H * TM.font_scale))
             self.setMinimumHeight(int(header_h + self.ROWS * row_h + _GAP * (self.ROWS - 1)))
         else:
-            self.setMinimumHeight(int(header_h + self.ROWS * 18))
+            base_h = 13 if TM.is_compact else 16
+            self.setMinimumHeight(int(header_h + self.ROWS * base_h))
 
     def paintEvent(self, _event):
         if not self._values:
@@ -249,7 +250,7 @@ class SegmentHealthBar(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._rows = ()
-        set_scaled_height(self, "SMALL", 3.2, 48)
+        set_scaled_height(self, "SMALL", 2.6 if TM.is_compact else 3.2, 40 if TM.is_compact else 48)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
     def set_data(self, stats):

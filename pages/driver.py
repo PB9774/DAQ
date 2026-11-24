@@ -19,7 +19,7 @@ from ui.helpers import (
     soc_status, style_numeral, temp_status,
 )
 from ui.chrome import SelectorHUD
-from ui.theme import Color
+from ui.theme import Color, TM
 from ui.widgets import LogoWidget, MetricTile, StatusBanner
 
 class DriverPage(QWidget):
@@ -32,12 +32,12 @@ class DriverPage(QWidget):
         self._feed_active = None
 
         outer = QVBoxLayout(self)
-        outer.setContentsMargins(10, 4, 10, 4)
-        outer.setSpacing(4)
+        outer.setContentsMargins(*( (6, 2, 6, 2) if TM.is_compact else (10, 4, 10, 4) ))
+        outer.setSpacing(3 if TM.is_compact else 4)
         outer.addWidget(self._build_topbar())
 
         body = QHBoxLayout()
-        body.setSpacing(8)
+        body.setSpacing(6 if TM.is_compact else 8)
         body.addWidget(self._build_charge(), 0)
         body.addWidget(self._build_speed(), 1)
         body.addWidget(self._build_numbers(), 0)
@@ -52,16 +52,17 @@ class DriverPage(QWidget):
     # ── construction ───────────────────────────────────────────────────────
     def _build_topbar(self):
         bar = QWidget()
-        set_scaled_height(bar, "LEAD", 2.4, 48)
+        set_scaled_height(bar, "LEAD", 2.0 if TM.is_compact else 2.4, 40 if TM.is_compact else 48)
         row = QHBoxLayout(bar)
-        row.setContentsMargins(4, 2, 4, 2)
-        row.setSpacing(12)
+        row.setContentsMargins(*( (4, 1, 4, 1) if TM.is_compact else (4, 2, 4, 2) ))
+        row.setSpacing(8 if TM.is_compact else 12)
 
-        row.addWidget(LogoWidget(height=26, max_width=104))
-        row.addWidget(rule(vertical=True, length=24))
+        logo_h = 22 if TM.is_compact else 26
+        row.addWidget(LogoWidget(height=logo_h, max_width=88 if TM.is_compact else 104))
+        row.addWidget(rule(vertical=True, length=logo_h))
         self._clock = label("--:--:--", size="SMALL", weight=700, mono=True)
         row.addWidget(self._clock)
-        row.addWidget(rule(vertical=True, length=24))
+        row.addWidget(rule(vertical=True, length=logo_h))
         self._source = label("NO SIGNAL", role="caption")
         row.addWidget(self._source)
         row.addStretch()
@@ -99,11 +100,11 @@ class DriverPage(QWidget):
         self._feed_button.style().polish(self._feed_button)
 
     def _build_charge(self):
-        frame, column = card(margins=(12, 10, 12, 10), spacing=4)
-        set_scaled_width(frame, 186)
+        frame, column = card(margins=(8, 4, 8, 4) if TM.is_compact else (10, 6, 10, 6), spacing=3)
+        set_scaled_width(frame, 170 if TM.is_compact else 186)
 
         head = QHBoxLayout()
-        head.setSpacing(6)
+        head.setSpacing(4)
         head.addStretch()
         head.addWidget(label("CHARGE", role="title"))
         head.addStretch()
@@ -112,27 +113,27 @@ class DriverPage(QWidget):
         value = QHBoxLayout()
         value.setSpacing(2)
         value.addStretch()
-        self._soc = numeral("--", "HERO", Color.SOC, Qt.AlignRight | Qt.AlignVCenter)
+        self._soc = numeral("--", "DISPLAY" if TM.is_compact else "HERO", Color.SOC, Qt.AlignRight | Qt.AlignVCenter)
         value.addWidget(self._soc)
         value.addWidget(label("%", role="unit", align=Qt.AlignBottom))
         value.addStretch()
         column.addLayout(value)
 
         row = QHBoxLayout()
-        row.setSpacing(10)
+        row.setSpacing(6 if TM.is_compact else 10)
         self._battery = BatteryGauge()
         row.addWidget(self._battery, 0)
 
         side = QVBoxLayout()
-        side.setSpacing(2)
+        side.setSpacing(1 if TM.is_compact else 2)
         side.addStretch()
         side.addWidget(label("ENERGY", role="title"))
-        self._energy = numeral("--", "LEAD", Color.TEXT, Qt.AlignLeft | Qt.AlignVCenter)
+        self._energy = numeral("--", "BODY" if TM.is_compact else "LEAD", Color.TEXT, Qt.AlignLeft | Qt.AlignVCenter)
         side.addWidget(self._energy)
         side.addWidget(label("kWh", role="unit"))
-        side.addSpacing(10)
+        side.addSpacing(6 if TM.is_compact else 10)
         side.addWidget(label("RANGE", role="title"))
-        self._range = numeral("--", "LEAD", Color.TEXT_2, Qt.AlignLeft | Qt.AlignVCenter)
+        self._range = numeral("--", "BODY" if TM.is_compact else "LEAD", Color.TEXT_2, Qt.AlignLeft | Qt.AlignVCenter)
         side.addWidget(self._range)
         side.addWidget(label("laps", role="unit"))
         side.addStretch()
@@ -144,18 +145,18 @@ class DriverPage(QWidget):
         frame = QFrame()
         frame.setObjectName("card")
         column = QVBoxLayout(frame)
-        column.setContentsMargins(8, 6, 8, 6)
+        column.setContentsMargins(*( (6, 4, 6, 4) if TM.is_compact else (8, 6, 8, 6) ))
         column.setSpacing(2)
-        self.speed = SpeedGauge()
+        self.speed = SpeedGauge(compact=TM.is_compact)
         column.addWidget(self.speed, 1)
         return frame
 
     def _build_numbers(self):
         holder = QWidget()
-        set_scaled_width(holder, 214)
+        set_scaled_width(holder, 185 if TM.is_compact else 214)
         column = QVBoxLayout(holder)
         column.setContentsMargins(0, 0, 0, 0)
-        column.setSpacing(8)
+        column.setSpacing(4 if TM.is_compact else 8)
 
         self._pack_v = MetricTile("PACK", "V", size="TITLE", accent=Color.TEXT)
         self._current = MetricTile("CURRENT", "A", size="TITLE", accent=Color.CURRENT)

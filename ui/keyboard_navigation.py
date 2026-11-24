@@ -112,6 +112,8 @@ class FiveKeyNavigation(QObject):
             u_text = text.upper()
             if "DARK" in u_text or "LIGHT" in u_text or "SWITCH" in u_text:
                 return ("SETUP › DISPLAY THEME", "Press OK: Toggle Dark / Light Theme")
+            if "OCCUPY" in u_text or "FULLSCREEN" in u_text or "WINDOWED" in u_text:
+                return ("SETUP › FULLSCREEN (7\")", "Press OK: Toggle Fullscreen / Windowed Mode")
             if text in ("SM", "MD", "LG", "XL"):
                 scale_labels = {"SM": "0.9x Small", "MD": "1.0x Normal", "LG": "1.15x Large", "XL": "1.3x Extra Large"}
                 return (f"SETUP › TEXT SCALE ({text})", f"Press OK: Set Font Size to {scale_labels.get(text, text)}")

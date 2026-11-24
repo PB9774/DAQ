@@ -10,7 +10,7 @@ import json
 
 from core.config import SETTINGS_FILE
 from ui.tokens import (
-    PALETTES, STATUS_FG, STATUS_TINT, FAMILIES, MONO, TYPE, RADIUS,
+    PALETTES, STATUS_FG, STATUS_TINT, FAMILIES, MONO, TYPE, TYPE_COMPACT, RADIUS,
 )
 
 DRIVER, ENGINEER = "driver", "engineer"
@@ -26,6 +26,9 @@ class Prefs:
         self.brightness = 1.0
         self.contrast = 1.0
         self.mode = DRIVER
+        self.fullscreen = False
+        self.screen_w = 1024
+        self.screen_h = 600
         self.load()
 
     def load(self):
@@ -40,6 +43,7 @@ class Prefs:
         self.brightness = float(data.get("brightness", data.get("bright", 1.0)))
         self.contrast = float(data.get("contrast", 1.0))
         self.mode = DRIVER if data.get("mode", DRIVER) == DRIVER else ENGINEER
+        self.fullscreen = bool(data.get("fullscreen", False))
 
     def save(self):
         try:
@@ -48,11 +52,16 @@ class Prefs:
                     "theme": self.theme, "font_scale": self.font_scale,
                     "font_family": self.font_family, "brightness": self.brightness,
                     "contrast": self.contrast, "mode": self.mode,
+                    "fullscreen": self.fullscreen,
                 }, handle, indent=2)
         except OSError:
             pass
 
     # ── derived ────────────────────────────────────────────────────────────
+    @property
+    def is_compact(self):
+        return self.screen_h <= 540 or self.screen_w <= 860
+
     @property
     def palette(self):
         return PALETTES.get(self.theme, PALETTES["dark"])
@@ -66,7 +75,8 @@ class Prefs:
         return self.theme == "dark"
 
     def size(self, key):
-        return int(round(TYPE.get(key, 17) * self.font_scale))
+        base = (TYPE_COMPACT if self.is_compact else TYPE).get(key, 17)
+        return int(round(base * self.font_scale))
 
     def toggle_theme(self):
         self.theme = "light" if self.is_dark else "dark"
@@ -76,7 +86,7 @@ class Prefs:
         return STATUS_TINT[self.theme if self.theme in STATUS_TINT else "dark"][status]
 
     def key(self):
-        return (self.theme, self.font_scale, self.font_family, round(self.contrast, 2))
+        return (self.theme, self.font_scale, self.font_family, round(self.contrast, 2), self.is_compact)
 
 
 TM = Prefs()
@@ -166,8 +176,12 @@ def _build_qss():
     rgba_cyan_med = 'rgba(0, 229, 255, 0.35)' if TM.is_dark else 'rgba(2, 132, 199, 0.25)'
     rgba_cyan_strong = 'rgba(0, 229, 255, 0.45)' if TM.is_dark else 'rgba(2, 132, 199, 0.35)'
     text_hi = '#FFFFFF' if TM.is_dark else p['TEXT']
-    pad_pill_h = max(8, int(round(14 / TM.font_scale)))
-    pad_pill_v = max(4, int(round(6 / TM.font_scale)))
+    pad_pill_h = max(6, int(round((10 if TM.is_compact else 14) / TM.font_scale)))
+    pad_pill_v = max(3, int(round((4 if TM.is_compact else 6) / TM.font_scale)))
+    btn_pad_v = 4 if TM.is_compact else 6
+    btn_pad_h = 10 if TM.is_compact else 14
+    btn_min_h = 28 if TM.is_compact else 34
+    pill_min_h = 24 if TM.is_compact else 28
 
     return f"""
 * {{ font-family:{ff}; color:{p['TEXT']}; outline:none; }}
@@ -214,22 +228,22 @@ QProgressBar::chunk {{ background:{p['ACCENT']}; border-radius:3px; }}
 """ + f"""
 QPushButton {{ font-size:{sz('BODY')}px; font-weight:700; }}
 QPushButton#primary {{ background:{p['ACCENT']}; color:#FFFFFF; border:none;
-    border-radius:{r_md}px; padding:8px 16px; min-height:42px; }}
+    border-radius:{r_md}px; padding:{btn_pad_v}px {btn_pad_h}px; min-height:{btn_min_h}px; }}
 QPushButton#primary:hover {{ background:{p['TEXT_2']}; color:{p['BG']}; }}
 QPushButton#primary:pressed {{ background:{p['ACCENT_SOFT']}; color:{p['ACCENT']}; }}
 QPushButton#ghost {{ background:transparent; color:{p['TEXT_2']};
-    border:{bw}px solid {p['LINE_HI']}; border-radius:{r_md}px; padding:8px 16px; min-height:40px; }}
+    border:{bw}px solid {p['LINE_HI']}; border-radius:{r_md}px; padding:{btn_pad_v}px {btn_pad_h}px; min-height:{btn_min_h}px; }}
 QPushButton#ghost:hover {{ border-color:{p['ACCENT']}; color:{p['ACCENT']}; }}
 QPushButton#danger {{ background:{crit}; color:#FFFFFF; border:none;
-    border-radius:{r_md}px; min-height:44px; }}
+    border-radius:{r_md}px; min-height:{btn_min_h}px; }}
 QPushButton#start {{ background:{ok}; color:#05130A; border:none;
-    border-radius:{r_md}px; min-height:46px; font-weight:800; }}
+    border-radius:{r_md}px; min-height:{btn_min_h}px; font-weight:800; }}
 QPushButton#stop  {{ background:{crit}; color:#FFFFFF; border:none;
-    border-radius:{r_md}px; min-height:46px; font-weight:800; }}
+    border-radius:{r_md}px; min-height:{btn_min_h}px; font-weight:800; }}
 
 QPushButton#pill {{ background:{p['SURFACE']}; color:{p['TEXT_2']};
     border:{bw}px solid {p['LINE']}; border-radius:{r_pill}px;
-    padding:{pad_pill_v}px {pad_pill_h}px; min-height:30px; font-size:{sz('SMALL')}px; font-weight:600; }}
+    padding:{pad_pill_v}px {pad_pill_h}px; min-height:{pill_min_h}px; font-size:{sz('SMALL')}px; font-weight:600; }}
 QPushButton#pill:hover {{ border-color:{p['ACCENT']}; color:{p['ACCENT']}; }}
 QPushButton#pill:checked {{ background:{p['ACCENT']}; color:#FFFFFF; border-color:{p['ACCENT']}; }}
 QPushButton#scale_pill {{
@@ -237,8 +251,8 @@ QPushButton#scale_pill {{
     color:{'#E2E8F0' if TM.is_dark else '#1E293B'};
     border:1.5px solid {'#2E4766' if TM.is_dark else '#CBD5E1'};
     border-radius:6px;
-    padding:5px 14px;
-    min-height:30px;
+    padding:{max(2, btn_pad_v - 1)}px {max(6, btn_pad_h - 4)}px;
+    min-height:{pill_min_h}px;
     font-size:{sz('SMALL')}px;
     font-weight:800;
 }}
@@ -321,7 +335,7 @@ QSlider::handle:horizontal {{ background:{p['TEXT']}; width:22px; height:22px;
     margin:-9px 0; border-radius:11px; border:3px solid {p['ACCENT']}; }}
 
 QComboBox {{ background:{p['CARD_HI']}; color:{p['TEXT']}; border:{bw}px solid {p['LINE_HI']};
-    border-radius:{r_sm}px; padding:6px 12px; min-height:32px; font-size:{sz('SMALL')}px; }}
+    border-radius:{r_sm}px; padding:4px 10px; min-height:{pill_min_h}px; font-size:{sz('SMALL')}px; }}
 QComboBox::drop-down {{ border:none; width:22px; }}
 QComboBox QAbstractItemView {{ background:{p['CARD']}; color:{p['TEXT']};
     border:1px solid {p['LINE_HI']}; selection-background-color:{p['ACCENT']};

@@ -59,8 +59,9 @@ class SegmentDetailsPage(QWidget):
         return frame
 
     def _build_summary(self):
-        frame, row = card(margins=(12, 6, 12, 6), spacing=10, vertical=False)
-        set_scaled_height(frame, "LEAD", 2.5, 50)
+        frame, row = card(margins=(10, 4, 10, 4) if TM.is_compact else (12, 6, 12, 6),
+                          spacing=6 if TM.is_compact else 10, vertical=False)
+        set_scaled_height(frame, "LEAD", 2.2 if TM.is_compact else 2.5, 40 if TM.is_compact else 48)
 
         self._readouts = {}
         specs = (
@@ -70,12 +71,14 @@ class SegmentDetailsPage(QWidget):
             ("AVG", "avg", Color.TEXT, "3.710 V"),
             ("OFF-BAND", "band", Color.TEXT, "00 cells"),
         )
+        rule_len = 20 if TM.is_compact else 24
+        val_size = "BODY" if TM.is_compact else "LEAD"
         for index, (title, key, colour, sample) in enumerate(specs):
             if index:
-                row.addWidget(rule(vertical=True, length=24))
-            row.addWidget(label(title, role="title"))
-            value = numeral("--", "LEAD", colour, Qt.AlignLeft | Qt.AlignVCenter)
-            set_mono_min_width(value, sample, "LEAD", 2)
+                row.addWidget(rule(vertical=True, length=rule_len))
+            row.addWidget(label(title, size="SMALL", weight=800))
+            value = numeral("--", val_size, colour, Qt.AlignLeft | Qt.AlignVCenter)
+            set_mono_min_width(value, sample, val_size, 2)
             self._readouts[key] = value
             row.addWidget(value)
         row.addStretch()

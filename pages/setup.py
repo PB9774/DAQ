@@ -25,6 +25,7 @@ class SetupPage(QWidget):
     brightness_changed = pyqtSignal(float)
     mode_changed = pyqtSignal(str)
     restart_requested = pyqtSignal()
+    fullscreen_toggled = pyqtSignal()
 
     def __init__(self, engine, parent=None):
         super().__init__(parent)
@@ -32,28 +33,30 @@ class SetupPage(QWidget):
         self._ip = None
 
         outer = QVBoxLayout(self)
-        outer.setContentsMargins(8, 4, 8, 4)
-        outer.setSpacing(6)
+        outer.setContentsMargins(*( (6, 2, 6, 2) if TM.is_compact else (8, 4, 8, 4) ))
+        outer.setSpacing(4 if TM.is_compact else 6)
 
         row = QHBoxLayout()
-        row.setSpacing(6)
+        row.setSpacing(4 if TM.is_compact else 6)
         row.addWidget(self._build_display(), 1)
         row.addWidget(self._build_source(), 1)
         outer.addLayout(row, 1)
 
         bottom = QHBoxLayout()
-        bottom.setSpacing(6)
+        bottom.setSpacing(4 if TM.is_compact else 6)
         bottom.addWidget(self._build_about(), 1)
         bottom.addWidget(self._build_actions(), 0)
         outer.addLayout(bottom, 0)
 
     # ── display ────────────────────────────────────────────────────────────
     def _build_display(self):
-        frame, column = card(name="display_card", margins=(12, 10, 12, 10), spacing=8)
+        frame, column = card(name="display_card",
+                             margins=(8, 4, 8, 4) if TM.is_compact else (10, 6, 10, 6),
+                             spacing=4 if TM.is_compact else 6)
         column.addWidget(label("DISPLAY PREFERENCES", role="title", weight=800))
 
         grid = QGridLayout()
-        grid.setSpacing(8)
+        grid.setSpacing(5 if TM.is_compact else 7)
         grid.setColumnStretch(1, 1)
 
         grid.addWidget(label("THEME", role="caption", weight=700), 0, 0)
@@ -67,8 +70,8 @@ class SetupPage(QWidget):
         holder = QFrame()
         holder.setObjectName("scale_box")
         sizes = QHBoxLayout(holder)
-        sizes.setContentsMargins(4, 4, 4, 4)
-        sizes.setSpacing(6)
+        sizes.setContentsMargins(3, 2, 3, 2)
+        sizes.setSpacing(4 if TM.is_compact else 6)
         self._scale_buttons = []
         for text, value in SCALES:
             button = QPushButton(text)
@@ -95,6 +98,13 @@ class SetupPage(QWidget):
         self._brightness.valueChanged.connect(self._set_brightness)
         grid.addWidget(self._brightness, 3, 1)
 
+        grid.addWidget(label("FULLSCREEN", role="caption", weight=700), 4, 0)
+        self._fullscreen_button = QPushButton()
+        self._fullscreen_button.setObjectName("pill")
+        self._fullscreen_button.setCursor(Qt.PointingHandCursor)
+        self._fullscreen_button.clicked.connect(self._toggle_fullscreen)
+        grid.addWidget(self._fullscreen_button, 4, 1)
+
         column.addLayout(grid)
         self._panel_note = label("", role="caption")
         column.addWidget(self._panel_note)
@@ -103,7 +113,9 @@ class SetupPage(QWidget):
         return frame
 
     def _build_source(self):
-        frame, column = card(name="source_card", margins=(12, 10, 12, 10), spacing=8)
+        frame, column = card(name="source_card",
+                             margins=(8, 4, 8, 4) if TM.is_compact else (10, 6, 10, 6),
+                             spacing=4 if TM.is_compact else 6)
         column.addWidget(label("DATA SOURCE", role="title"))
 
         self._source_state = label("", size="LEAD", weight=700, mono=True)
@@ -136,7 +148,7 @@ class SetupPage(QWidget):
         return frame
 
     def _build_about(self):
-        frame, column = card(margins=(12, 10, 12, 10), spacing=4)
+        frame, column = card(margins=(8, 4, 8, 4) if TM.is_compact else (10, 6, 10, 6), spacing=4)
         column.addWidget(label("SYSTEM", role="title"))
         self._about = label("", role="caption", mono=True)
         column.addWidget(self._about)
@@ -144,8 +156,9 @@ class SetupPage(QWidget):
         return frame
 
     def _build_actions(self):
-        frame, column = card(margins=(12, 10, 12, 10), spacing=8)
-        frame.setMinimumWidth(240)
+        frame, column = card(margins=(8, 4, 8, 4) if TM.is_compact else (10, 6, 10, 6),
+                             spacing=4 if TM.is_compact else 6)
+        frame.setMinimumWidth(180 if TM.is_compact else 220)
         column.addWidget(label("ACTIONS", role="title"))
 
         restart = QPushButton("RESTART APP")
@@ -162,6 +175,10 @@ class SetupPage(QWidget):
         return frame
 
     # ── handlers ───────────────────────────────────────────────────────────
+    def _toggle_fullscreen(self):
+        self.fullscreen_toggled.emit()
+        self._sync_labels()
+
     def _toggle_theme(self):
         TM.toggle_theme()
         self.theme_changed.emit()
@@ -208,6 +225,8 @@ class SetupPage(QWidget):
     def _sync_labels(self):
         set_text(self._theme_button, "DARK  ·  SWITCH" if TM.is_dark
                  else "LIGHT  ·  SWITCH")
+        set_text(self._fullscreen_button, "OCCUPY DISPLAY (ON)" if TM.fullscreen
+                 else "WINDOWED (OFF)")
         set_text(self._panel_note,
                  "PANEL BACKLIGHT %d%%" % round(TM.brightness * 100) if backlight.available()
                  else "WINDOW DIMMING ACTIVE")
