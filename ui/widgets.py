@@ -10,7 +10,7 @@ import os
 
 from PyQt5.QtCore import Qt, QRectF
 from PyQt5.QtGui import QColor, QPainter, QPixmap
-from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QComboBox, QFrame, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget
 
 from core.config import ASSET_DIR
 from ui.helpers import (
@@ -180,3 +180,28 @@ class StatusBanner(QFrame):
 
     def restyle(self):
         self._status = None
+
+
+class KeypadComboBox(QComboBox):
+    """QComboBox tailored for 5-key hardware keypad navigation.
+
+    Tracks popup open/close state so hardware directional buttons
+    and OK button can browse and confirm options without a mouse cursor.
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._popup_open = False
+
+    def showPopup(self):
+        self._popup_open = True
+        super().showPopup()
+
+    def hidePopup(self):
+        self._popup_open = False
+        super().hidePopup()
+
+    @property
+    def is_popup_open(self):
+        return self._popup_open
+

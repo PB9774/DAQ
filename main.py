@@ -137,9 +137,10 @@ class MainWindow(QMainWindow):
         self.addAction(action)
 
     def _toggle_fullscreen(self):
+        focus_w = self.focusWidget()
         if self.isFullScreen():
             TM.fullscreen = False
-            self.setWindowFlags(Qt.Widget)
+            self.setWindowFlags(Qt.Window)
             avail = QApplication.primaryScreen().availableGeometry()
             w = min(avail.width(), SCREEN_W)
             h = min(avail.height(), SCREEN_H)
@@ -151,9 +152,17 @@ class MainWindow(QMainWindow):
             self.setWindowFlags(Qt.FramelessWindowHint | Qt.Window)
             self.showFullScreen()
         TM.save()
+        self.activateWindow()
+        self.raise_()
         setup_page = self._pages.get(4)
         if setup_page and hasattr(setup_page, "_sync_labels"):
             setup_page._sync_labels()
+        if focus_w:
+            try:
+                focus_w.setFocus(Qt.OtherFocusReason)
+            except Exception:
+                pass
+        self.update_selector_hud(self.focusWidget())
 
     def _active_modal(self):
         return QApplication.activeModalWidget()

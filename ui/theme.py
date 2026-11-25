@@ -180,8 +180,8 @@ def _build_qss():
     pad_pill_v = max(3, int(round((4 if TM.is_compact else 6) / TM.font_scale)))
     btn_pad_v = 4 if TM.is_compact else 6
     btn_pad_h = 10 if TM.is_compact else 14
-    btn_min_h = 28 if TM.is_compact else 34
-    pill_min_h = 24 if TM.is_compact else 28
+    btn_min_h = 24 if TM.is_compact else 32
+    pill_min_h = 20 if TM.is_compact else 26
 
     return f"""
 * {{ font-family:{ff}; color:{p['TEXT']}; outline:none; }}
@@ -335,7 +335,7 @@ QSlider::handle:horizontal {{ background:{p['TEXT']}; width:22px; height:22px;
     margin:-9px 0; border-radius:11px; border:3px solid {p['ACCENT']}; }}
 
 QComboBox {{ background:{p['CARD_HI']}; color:{p['TEXT']}; border:{bw}px solid {p['LINE_HI']};
-    border-radius:{r_sm}px; padding:4px 10px; min-height:{pill_min_h}px; font-size:{sz('SMALL')}px; }}
+    border-radius:{r_sm}px; padding:{2 if TM.is_compact else 4}px 10px; min-height:{pill_min_h}px; font-size:{sz('SMALL')}px; }}
 QComboBox::drop-down {{ border:none; width:22px; }}
 QComboBox QAbstractItemView {{ background:{p['CARD']}; color:{p['TEXT']};
     border:1px solid {p['LINE_HI']}; selection-background-color:{p['ACCENT']};
