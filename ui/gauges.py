@@ -14,7 +14,7 @@ from PyQt5.QtWidgets import QSizePolicy, QWidget
 
 from core.config import SPEED_MAX
 from ui.helpers import soc_status
-from ui.theme import Color
+from ui.theme import Color, TM
 from ui.tokens import MONO_QFONT
 
 _START_ANGLE = 216.0
@@ -42,7 +42,7 @@ class SpeedGauge(QWidget):
         super().__init__(parent)
         self._speed = 0.0
         self._compact = compact
-        self.setMinimumHeight(150 if compact else 230)
+        self.setMinimumHeight(140 if (compact or TM.is_compact) else 190)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.setAttribute(Qt.WA_OpaquePaintEvent, False)
 
@@ -140,7 +140,7 @@ class BatteryGauge(QWidget):
         super().__init__(parent)
         self._lit = -1
         self._status = soc_status(0.0)
-        self.setMinimumWidth(74)
+        self.setMinimumWidth(48)
         self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
 
     def set_soc(self, soc):

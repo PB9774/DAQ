@@ -74,7 +74,8 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("%s — %s" % (APP_NAME, APP_VERSION))
-        self.setFixedSize(SCREEN_W, SCREEN_H)
+        self.resize(SCREEN_W, SCREEN_H)
+        self.setMinimumSize(780, 440)
 
         self.engine = DataEngine()
         self.recorder = Recorder(self.engine)
@@ -106,8 +107,8 @@ class MainWindow(QMainWindow):
 
         console = QWidget()
         column = QVBoxLayout(console)
-        column.setContentsMargins(10, 4, 10, 0)
-        column.setSpacing(5)
+        column.setContentsMargins(*( (6, 2, 6, 0) if TM.is_compact else (10, 4, 10, 0) ))
+        column.setSpacing(3 if TM.is_compact else 5)
 
         self.strip = StatusStrip()
         column.addWidget(self.strip)
@@ -136,7 +137,32 @@ class MainWindow(QMainWindow):
         self.addAction(action)
 
     def _toggle_fullscreen(self):
-        self.showNormal() if self.isFullScreen() else self.showFullScreen()
+        focus_w = self.focusWidget()
+        if self.isFullScreen():
+            TM.fullscreen = False
+            self.setWindowFlags(Qt.Window)
+            avail = QApplication.primaryScreen().availableGeometry()
+            w = min(avail.width(), SCREEN_W)
+            h = min(avail.height(), SCREEN_H)
+            self.resize(w, h)
+            self.move((avail.width() - w) // 2, (avail.height() - h) // 2)
+            self.showNormal()
+        else:
+            TM.fullscreen = True
+            self.setWindowFlags(Qt.FramelessWindowHint | Qt.Window)
+            self.showFullScreen()
+        TM.save()
+        self.activateWindow()
+        self.raise_()
+        setup_page = self._pages.get(4)
+        if setup_page and hasattr(setup_page, "_sync_labels"):
+            setup_page._sync_labels()
+        if focus_w:
+            try:
+                focus_w.setFocus(Qt.OtherFocusReason)
+            except Exception:
+                pass
+        self.update_selector_hud(self.focusWidget())
 
     def _active_modal(self):
         return QApplication.activeModalWidget()
@@ -220,6 +246,7 @@ class MainWindow(QMainWindow):
             page.brightness_changed.connect(self.apply_brightness)
             page.mode_changed.connect(self.set_mode)
             page.restart_requested.connect(self.restart)
+            page.fullscreen_toggled.connect(self._toggle_fullscreen)
         return page
 
     # ── theme ──────────────────────────────────────────────────────────────
@@ -275,6 +302,16 @@ class MainWindow(QMainWindow):
         self._cleanup()
         event.accept()
 
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        w, h = self.width(), self.height()
+        if w > 0 and h > 0:
+            was_compact = TM.is_compact
+            TM.screen_w = w
+            TM.screen_h = h
+            if TM.is_compact != was_compact:
+                self.apply_theme()
+
     def restart(self):
         self._cleanup()
         os.execv(sys.executable, [sys.executable] + sys.argv)
@@ -286,13 +323,17 @@ def main():
     app.setApplicationName(APP_NAME)
     app.setFont(QFont(TM.font_family, 10))
 
+    screen_geo = app.primaryScreen().geometry()
+    TM.screen_w = screen_geo.width()
+    TM.screen_h = screen_geo.height()
+
     window = MainWindow()
-    if FULLSCREEN:
-        window.setWindowFlags(Qt.FramelessWindowHint)
+    if FULLSCREEN or TM.fullscreen:
+        window.setWindowFlags(Qt.FramelessWindowHint | Qt.Window)
         window.showFullScreen()
-        app.setOverrideCursor(QCursor(Qt.BlankCursor))
     else:
         screen = app.primaryScreen().geometry()
+        window.resize(SCREEN_W, SCREEN_H)
         window.move((screen.width() - SCREEN_W) // 2, (screen.height() - SCREEN_H) // 2)
         window.show()
     return app.exec_()

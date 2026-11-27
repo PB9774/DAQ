@@ -10,7 +10,7 @@ from ui.helpers import (
     card, dv_status, label, numeral, set_scaled_width, set_text, soc_status,
     style_numeral, temp_status,
 )
-from ui.theme import Color
+from ui.theme import Color, TM
 from ui.widgets import MetricTile
 
 
@@ -31,7 +31,7 @@ class OverviewPage(QWidget):
         top.addLayout(self._build_tiles(), 1)
         self.faults = FaultPanel(rows=6)
         self.faults.setFocusPolicy(Qt.StrongFocus)
-        set_scaled_width(self.faults, 298)
+        set_scaled_width(self.faults, 235 if TM.is_compact else 275)
         top.addWidget(self.faults, 0)
         outer.addLayout(top, 1)
 
@@ -41,12 +41,12 @@ class OverviewPage(QWidget):
 
     def _build_charge(self):
         frame, column = card(margins=(8, 8, 8, 6), spacing=4)
-        set_scaled_width(frame, 266)
+        set_scaled_width(frame, 205 if TM.is_compact else 235)
 
         row = QHBoxLayout()
-        row.setSpacing(10)
+        row.setSpacing(8)
         self._battery = BatteryGauge()
-        self._battery.setFixedWidth(56)
+        self._battery.setFixedWidth(46 if TM.is_compact else 54)
         row.addWidget(self._battery)
 
         side = QVBoxLayout()

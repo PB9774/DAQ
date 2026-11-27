@@ -112,6 +112,8 @@ class FiveKeyNavigation(QObject):
             u_text = text.upper()
             if "DARK" in u_text or "LIGHT" in u_text or "SWITCH" in u_text:
                 return ("SETUP › DISPLAY THEME", "Press OK: Toggle Dark / Light Theme")
+            if "OCCUPY" in u_text or "FULLSCREEN" in u_text or "WINDOWED" in u_text:
+                return ("SETUP › FULLSCREEN", "Press OK: Toggle Fullscreen (Occupy Entire Display)")
             if text in ("SM", "MD", "LG", "XL"):
                 scale_labels = {"SM": "0.9x Small", "MD": "1.0x Normal", "LG": "1.15x Large", "XL": "1.3x Extra Large"}
                 return (f"SETUP › TEXT SCALE ({text})", f"Press OK: Set Font Size to {scale_labels.get(text, text)}")
@@ -147,6 +149,8 @@ class FiveKeyNavigation(QObject):
         # 6. Dropdown Combo Box
         if isinstance(widget, QComboBox):
             curr_text = widget.currentText()
+            if getattr(widget, "_popup_open", False):
+                return (f"SETUP › TYPEFACE DROPDOWN ({curr_text})", "Use Up/Down to choose font  |  Press OK to confirm")
             return (f"SETUP › TYPEFACE ({curr_text})", "Press OK: Open Font Dropdown Menu")
 
         # 6. ScrollArea / CellGrid
@@ -391,9 +395,39 @@ class FiveKeyNavigation(QObject):
             return True
 
         # Native popup lists (like combobox views) need the arrows and Enter key
+        active_combo = None
+        focus = self.window.focusWidget()
+        if isinstance(focus, QComboBox) and getattr(focus, "_popup_open", False):
+            active_combo = focus
+        elif isinstance(watched, QComboBox) and getattr(watched, "_popup_open", False):
+            active_combo = watched
+        else:
+            curr_page = self.window.stack.currentWidget() if hasattr(self.window, "stack") else None
+            if curr_page:
+                for cb in curr_page.findChildren(QComboBox):
+                    if getattr(cb, "_popup_open", False):
+                        active_combo = cb
+                        break
+
+        if active_combo is not None:
+            if key in (Qt.Key_Up, Qt.Key_Down):
+                delta = -1 if key == Qt.Key_Up else 1
+                new_idx = max(0, min(active_combo.count() - 1, active_combo.currentIndex() + delta))
+                active_combo.setCurrentIndex(new_idx)
+                view = active_combo.view()
+                if view and view.model():
+                    view.setCurrentIndex(view.model().index(new_idx, 0))
+                self.window.update_selector_hud(active_combo)
+                return True
+
+            if key in ENTER_KEYS or key in (Qt.Key_Left, Qt.Key_Right):
+                active_combo.hidePopup()
+                active_combo.setFocus(Qt.OtherFocusReason)
+                self.window.update_selector_hud(active_combo)
+                return True
+
         if QApplication.activePopupWidget() is not None:
             return False
-        focus = self.window.focusWidget()
         if isinstance(focus, QComboBox) and focus.view().isVisible():
             return False
 

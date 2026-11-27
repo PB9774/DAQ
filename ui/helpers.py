@@ -83,17 +83,20 @@ def set_scaled_width(widget, base, minimum=True):
 
 def _apply_scaled_width(widget, base, minimum):
     # Responsive container scaling: scales gently with font_scale (up to 8%)
-    # so cards don't collide or squeeze adjacent columns out of the 1024px screen.
+    # and adjusts for compact 7-inch displays (800x480).
     factor = min(1.08, max(0.92, 1.0 + (TM.font_scale - 1.0) * 0.25))
+    if TM.is_compact:
+        factor *= 0.85
     width = int(round(base * factor))
     (widget.setMinimumWidth if minimum else widget.setFixedWidth)(width)
 
 
 def _scaled_height(size, factor, floor):
-    # Responsive container height: protects vertical budget in 600px window
+    # Responsive container height: protects vertical budget across 480px and 600px windows
     calc_h = int(round(TM.size(size) * factor))
-    max_h = int(round(floor * 1.12)) if floor else calc_h
-    return min(max_h, max(floor, calc_h))
+    effective_floor = int(round(floor * 0.82)) if (TM.is_compact and floor) else floor
+    max_h = int(round(effective_floor * 1.12)) if effective_floor else calc_h
+    return min(max_h, max(effective_floor, calc_h))
 
 
 def restyle_tree(root):
@@ -199,8 +202,10 @@ def _apply_card_spec(frame):
     if layout is None:
         return
     pad_factor = 0.80 if TM.font_scale >= 1.25 else (0.88 if TM.font_scale > 1.1 else 1.0)
-    scaled_margins = tuple(max(3, int(m * pad_factor)) for m in margins)
-    scaled_spacing = max(3, int(spacing * pad_factor))
+    if TM.is_compact:
+        pad_factor *= 0.75
+    scaled_margins = tuple(max(2, int(m * pad_factor)) for m in margins)
+    scaled_spacing = max(2, int(spacing * pad_factor))
     layout.setContentsMargins(*scaled_margins)
     layout.setSpacing(scaled_spacing)
 

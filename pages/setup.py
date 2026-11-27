@@ -16,6 +16,7 @@ from core.config import APP_NAME, APP_VERSION, SEGMENTS, CELLS_TOTAL, TELEMETRY_
 from ui.helpers import card, label, set_text
 from ui.theme import DRIVER, ENGINEER, TM
 from ui.tokens import FAMILIES
+from ui.widgets import KeypadComboBox
 
 SCALES = (("SM", 0.9), ("MD", 1.0), ("LG", 1.15), ("XL", 1.3))
 
@@ -25,6 +26,7 @@ class SetupPage(QWidget):
     brightness_changed = pyqtSignal(float)
     mode_changed = pyqtSignal(str)
     restart_requested = pyqtSignal()
+    fullscreen_toggled = pyqtSignal()
 
     def __init__(self, engine, parent=None):
         super().__init__(parent)
@@ -32,43 +34,56 @@ class SetupPage(QWidget):
         self._ip = None
 
         outer = QVBoxLayout(self)
-        outer.setContentsMargins(8, 4, 8, 4)
-        outer.setSpacing(6)
+        outer.setContentsMargins(*( (6, 2, 6, 2) if TM.is_compact else (8, 4, 8, 4) ))
+        outer.setSpacing(4 if TM.is_compact else 6)
 
         row = QHBoxLayout()
-        row.setSpacing(6)
+        row.setSpacing(4 if TM.is_compact else 6)
         row.addWidget(self._build_display(), 1)
         row.addWidget(self._build_source(), 1)
-        outer.addLayout(row, 1)
+        outer.addLayout(row, 3)
 
         bottom = QHBoxLayout()
-        bottom.setSpacing(6)
+        bottom.setSpacing(4 if TM.is_compact else 6)
         bottom.addWidget(self._build_about(), 1)
         bottom.addWidget(self._build_actions(), 0)
-        outer.addLayout(bottom, 0)
+        outer.addLayout(bottom, 2)
+
+        self._sync_labels()
 
     # ── display ────────────────────────────────────────────────────────────
     def _build_display(self):
-        frame, column = card(name="display_card", margins=(12, 10, 12, 10), spacing=8)
+        frame, column = card(name="display_card",
+                             margins=(6, 3, 6, 3) if TM.is_compact else (10, 6, 10, 6),
+                             spacing=2 if TM.is_compact else 5)
         column.addWidget(label("DISPLAY PREFERENCES", role="title", weight=800))
 
         grid = QGridLayout()
-        grid.setSpacing(8)
+        grid.setSpacing(3 if TM.is_compact else 6)
         grid.setColumnStretch(1, 1)
 
         grid.addWidget(label("THEME", role="caption", weight=700), 0, 0)
+        mode_box = QHBoxLayout()
+        mode_box.setSpacing(3 if TM.is_compact else 6)
         self._theme_button = QPushButton()
         self._theme_button.setObjectName("pill")
         self._theme_button.setCursor(Qt.PointingHandCursor)
         self._theme_button.clicked.connect(self._toggle_theme)
-        grid.addWidget(self._theme_button, 0, 1)
+        mode_box.addWidget(self._theme_button, 1)
+
+        self._fullscreen_button = QPushButton()
+        self._fullscreen_button.setObjectName("pill")
+        self._fullscreen_button.setCursor(Qt.PointingHandCursor)
+        self._fullscreen_button.clicked.connect(self._toggle_fullscreen)
+        mode_box.addWidget(self._fullscreen_button, 1)
+        grid.addLayout(mode_box, 0, 1)
 
         grid.addWidget(label("TEXT SIZE", role="caption", weight=700), 1, 0)
         holder = QFrame()
         holder.setObjectName("scale_box")
         sizes = QHBoxLayout(holder)
-        sizes.setContentsMargins(4, 4, 4, 4)
-        sizes.setSpacing(6)
+        sizes.setContentsMargins(2, 1, 2, 1)
+        sizes.setSpacing(2 if TM.is_compact else 4)
         self._scale_buttons = []
         for text, value in SCALES:
             button = QPushButton(text)
@@ -82,7 +97,7 @@ class SetupPage(QWidget):
         grid.addWidget(holder, 1, 1)
 
         grid.addWidget(label("TYPEFACE", role="caption", weight=700), 2, 0)
-        family = QComboBox()
+        family = KeypadComboBox()
         family.addItems(sorted(FAMILIES))
         family.setCurrentText(TM.font_family if TM.font_family in FAMILIES else "Inter")
         family.currentTextChanged.connect(self._set_family)
@@ -99,11 +114,12 @@ class SetupPage(QWidget):
         self._panel_note = label("", role="caption")
         column.addWidget(self._panel_note)
         column.addStretch()
-        self._sync_labels()
         return frame
 
     def _build_source(self):
-        frame, column = card(name="source_card", margins=(12, 10, 12, 10), spacing=8)
+        frame, column = card(name="source_card",
+                             margins=(8, 4, 8, 4) if TM.is_compact else (10, 6, 10, 6),
+                             spacing=4 if TM.is_compact else 6)
         column.addWidget(label("DATA SOURCE", role="title"))
 
         self._source_state = label("", size="LEAD", weight=700, mono=True)
@@ -136,7 +152,7 @@ class SetupPage(QWidget):
         return frame
 
     def _build_about(self):
-        frame, column = card(margins=(12, 10, 12, 10), spacing=4)
+        frame, column = card(margins=(8, 4, 8, 4) if TM.is_compact else (10, 6, 10, 6), spacing=4)
         column.addWidget(label("SYSTEM", role="title"))
         self._about = label("", role="caption", mono=True)
         column.addWidget(self._about)
@@ -144,9 +160,16 @@ class SetupPage(QWidget):
         return frame
 
     def _build_actions(self):
-        frame, column = card(margins=(12, 10, 12, 10), spacing=8)
-        frame.setMinimumWidth(240)
+        frame, column = card(margins=(8, 4, 8, 4) if TM.is_compact else (10, 6, 10, 6),
+                             spacing=4 if TM.is_compact else 6)
+        frame.setMinimumWidth(180 if TM.is_compact else 220)
         column.addWidget(label("ACTIONS", role="title"))
+
+        self._action_fullscreen = QPushButton()
+        self._action_fullscreen.setObjectName("ghost")
+        self._action_fullscreen.setCursor(Qt.PointingHandCursor)
+        self._action_fullscreen.clicked.connect(self._toggle_fullscreen)
+        column.addWidget(self._action_fullscreen)
 
         restart = QPushButton("RESTART APP")
         restart.setObjectName("ghost")
@@ -162,6 +185,10 @@ class SetupPage(QWidget):
         return frame
 
     # ── handlers ───────────────────────────────────────────────────────────
+    def _toggle_fullscreen(self):
+        self.fullscreen_toggled.emit()
+        self._sync_labels()
+
     def _toggle_theme(self):
         TM.toggle_theme()
         self.theme_changed.emit()
@@ -208,6 +235,12 @@ class SetupPage(QWidget):
     def _sync_labels(self):
         set_text(self._theme_button, "DARK  ·  SWITCH" if TM.is_dark
                  else "LIGHT  ·  SWITCH")
+        is_fs = self.window().isFullScreen() if (self.window() and self.window().isVisible()) else TM.fullscreen
+        set_text(self._fullscreen_button, "EXIT FULLSCREEN" if is_fs
+                 else "ENTER FULLSCREEN")
+        if hasattr(self, "_action_fullscreen"):
+            set_text(self._action_fullscreen, "EXIT FULLSCREEN" if is_fs
+                     else "ENTER FULLSCREEN")
         set_text(self._panel_note,
                  "PANEL BACKLIGHT %d%%" % round(TM.brightness * 100) if backlight.available()
                  else "WINDOW DIMMING ACTIVE")

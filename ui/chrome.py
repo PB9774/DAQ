@@ -32,22 +32,23 @@ class StatusStrip(QFrame):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("card")
-        set_scaled_height(self, "LEAD", 2.6, 52)
+        set_scaled_height(self, "LEAD", 2.2 if TM.is_compact else 2.5, 42 if TM.is_compact else 48)
         self._soc_status = None
         self._rec_on = None
         self._source = None
 
         row = QHBoxLayout(self)
-        row.setContentsMargins(10, 0, 12, 0)
-        row.setSpacing(9)
+        row.setContentsMargins(*( (8, 0, 8, 0) if TM.is_compact else (10, 0, 12, 0) ))
+        row.setSpacing(6 if TM.is_compact else 8)
 
-        row.addWidget(LogoWidget(height=26, max_width=104))
-        row.addWidget(rule(vertical=True, length=26))
+        logo_h = 22 if TM.is_compact else 26
+        row.addWidget(LogoWidget(height=logo_h, max_width=88 if TM.is_compact else 104))
+        row.addWidget(rule(vertical=True, length=logo_h))
 
         self._clock = numeral("--:--:--", "LEAD", Color.TEXT, Qt.AlignLeft | Qt.AlignVCenter)
         set_mono_width(self._clock, "00:00:00", "LEAD")
         row.addWidget(self._clock)
-        row.addWidget(rule(vertical=True, length=26))
+        row.addWidget(rule(vertical=True, length=logo_h))
 
         row.addWidget(label("SOC", role="title"))
         self._soc = numeral("--%", "LEAD", Color.SOC)
@@ -56,19 +57,19 @@ class StatusStrip(QFrame):
         self._soc_bar = QProgressBar()
         self._soc_bar.setRange(0, 1000)
         self._soc_bar.setTextVisible(False)
-        self._soc_bar.setFixedHeight(8)
-        self._soc_bar.setMinimumWidth(48)
+        self._soc_bar.setFixedHeight(6 if TM.is_compact else 8)
+        self._soc_bar.setMinimumWidth(36 if TM.is_compact else 48)
         self._soc_bar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         row.addWidget(self._soc_bar, 1)
-        row.addWidget(rule(vertical=True, length=26))
+        row.addWidget(rule(vertical=True, length=logo_h))
 
         self._pill = StatusPill()
         row.addWidget(self._pill)
 
         self._src = label("NO SIGNAL", role="caption")
-        set_mono_width(self._src, "CAN ● SIM", "CAPTION", 8)
+        set_mono_width(self._src, "CAN ✕ NO SIG", "CAPTION", 6)
         row.addWidget(self._src)
-        row.addWidget(rule(vertical=True, length=26))
+        row.addWidget(rule(vertical=True, length=logo_h))
 
         self._rec = label("○ IDLE", role="caption")
         set_mono_width(self._rec, "● REC 9999s", "CAPTION", 6)
@@ -132,11 +133,11 @@ class SelectorHUD(QFrame):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("selector_hud")
-        set_scaled_height(self, "CAPTION", 2.2, 30)
+        set_scaled_height(self, "CAPTION", 1.8 if TM.is_compact else 2.1, 24 if TM.is_compact else 28)
 
         row = QHBoxLayout(self)
-        row.setContentsMargins(12, 2, 12, 2)
-        row.setSpacing(8)
+        row.setContentsMargins(*( (8, 1, 8, 1) if TM.is_compact else (12, 2, 12, 2) ))
+        row.setSpacing(5 if TM.is_compact else 8)
 
         lbl_loc = label("⯈", role="title")
         lbl_loc.setObjectName("hud_title")
@@ -178,12 +179,12 @@ class NavBar(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("navbar")
-        set_scaled_height(self, "CAPTION", 4.0, 56)
+        set_scaled_height(self, "CAPTION", 3.2 if TM.is_compact else 3.8, 44 if TM.is_compact else 52)
         self._buttons = []
 
         row = QHBoxLayout(self)
-        row.setContentsMargins(6, 0, 6, 0)
-        row.setSpacing(4)
+        row.setContentsMargins(*( (4, 0, 4, 0) if TM.is_compact else (6, 0, 6, 0) ))
+        row.setSpacing(3 if TM.is_compact else 4)
 
         driver = QPushButton("◀  DRIVER")
         driver.setObjectName("mode")

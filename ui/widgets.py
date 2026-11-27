@@ -10,7 +10,7 @@ import os
 
 from PyQt5.QtCore import Qt, QRectF
 from PyQt5.QtGui import QColor, QPainter, QPixmap
-from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QComboBox, QFrame, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget
 
 from core.config import ASSET_DIR
 from ui.helpers import (
@@ -102,8 +102,8 @@ class MetricTile(QFrame):
             outer.addWidget(self.detail)
 
     def _apply_spacing(self):
-        pad_v = max(3, int(round(7 / TM.font_scale)))
-        pad_h = max(8, int(round(12 / TM.font_scale)))
+        pad_v = max(2, int(round((4 if TM.is_compact else 7) / TM.font_scale)))
+        pad_h = max(6, int(round((8 if TM.is_compact else 12) / TM.font_scale)))
         self.layout().setContentsMargins(pad_h, pad_v, pad_h, pad_v)
         self.layout().setSpacing(max(1, int(round(2 / TM.font_scale))))
 
@@ -149,7 +149,7 @@ class StatusBanner(QFrame):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("card")
-        set_scaled_height(self, "TITLE", 2.6, 52)
+        set_scaled_height(self, "TITLE", 2.0 if TM.is_compact else 2.5, 42 if TM.is_compact else 50)
         self._status = None
 
         row = QHBoxLayout(self)
@@ -180,3 +180,28 @@ class StatusBanner(QFrame):
 
     def restyle(self):
         self._status = None
+
+
+class KeypadComboBox(QComboBox):
+    """QComboBox tailored for 5-key hardware keypad navigation.
+
+    Tracks popup open/close state so hardware directional buttons
+    and OK button can browse and confirm options without a mouse cursor.
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._popup_open = False
+
+    def showPopup(self):
+        self._popup_open = True
+        super().showPopup()
+
+    def hidePopup(self):
+        self._popup_open = False
+        super().hidePopup()
+
+    @property
+    def is_popup_open(self):
+        return self._popup_open
+

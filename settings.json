@@ -1,8 +1,9 @@
 {
   "theme": "dark",
   "font_scale": 1.0,
-  "font_family": "Roboto",
+  "font_family": "Inter",
   "brightness": 1.0,
   "contrast": 1.66,
-  "mode": "engineer"
+  "mode": "engineer",
+  "fullscreen": false
 }
